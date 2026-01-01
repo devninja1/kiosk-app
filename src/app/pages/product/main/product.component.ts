@@ -38,7 +38,7 @@ import { MatPaginator } from '@angular/material/paginator';
   styleUrl: './product.component.scss'
 })
 export class ProductComponent implements OnInit, AfterViewInit {
-  displayedColumns: string[] = ['product_code', 'name', 'group', 'category', 'description', 'cost_price', 'unit_price', 'profit_margin', 'stock', 'is_Stock_enable', 'is_active', 'actions'];
+  displayedColumns: string[] = ['product_code', 'name', 'group', 'category', 'description', 'cost_price', 'unit_price', 'profit_margin', 'display_order', 'stock', 'is_Stock_enable', 'is_active', 'actions'];
   dataSource: MatTableDataSource<Product>;
 
   categoryFilter = new FormControl('');
@@ -63,8 +63,9 @@ export class ProductComponent implements OnInit, AfterViewInit {
       const searchTerms = JSON.parse(filter);
 
       // Combine all searchable string properties of the product
-      const dataStr = [data.name, data.group, data.description, data.category, data.cost_price, data.unit_price, data.stock]
-        .filter(Boolean) // Filter out null/undefined values
+      const dataStr = [data.name, data.group, data.description, data.category, data.cost_price, data.unit_price, data.display_order, data.stock]
+        .filter((value) => value !== null && value !== undefined)
+        .map(String)
         .join(' ')
         .toLowerCase();
 

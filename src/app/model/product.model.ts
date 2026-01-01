@@ -7,6 +7,7 @@ export interface Product {
   description: string;
   unit_price: number;
   cost_price: number;
+  display_order?: number;
   stock: number;
   is_Stock_enable: boolean;
   is_active: boolean;
