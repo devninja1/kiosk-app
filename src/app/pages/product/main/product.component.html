@@ -17,7 +17,9 @@
       <mat-label>Filter by Category</mat-label>
       <mat-select [formControl]="categoryFilter">
         <mat-option value="">All Categories</mat-option>
-        <mat-option *ngFor="let category of uniqueCategories" [value]="category">{{ category }}</mat-option>
+        @for (category of uniqueCategories; track category) {
+          <mat-option [value]="category">{{ category }}</mat-option>
+        }
       </mat-select>
     </mat-form-field>
   </div>

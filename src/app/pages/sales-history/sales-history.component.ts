@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe, NgFor } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -13,13 +13,13 @@ import { SalesItem } from '../../model/sales.model';
 import { SalesService } from '../../core/services/sales.service';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatInputModule } from '@angular/material/input';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-sales-history',
   standalone: true,
   imports: [
     CommonModule,
-    NgFor,
     MatTableModule,
     MatIconModule,
     MatButtonModule,
@@ -126,6 +126,12 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
   printReceipt(sale: Sale): void {
     const currencyPipe = new CurrencyPipe('en-US');
     const datePipe = new DatePipe('en-US');
+    const displaySaleId = sale.order_id ?? sale.id;
+    const companyName = environment.companyName;
+    const discountAmount = sale.discount ?? 0;
+    const discountHtml = discountAmount
+      ? `<div class="total-row"><span>Discount:</span><span>${currencyPipe.transform(discountAmount)}</span></div>`
+      : '';
 
     const itemsHtml = sale.order_items.map(item => `
       <tr>
@@ -136,10 +142,14 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
       </tr>
     `).join('');
 
+    const customerLine = sale.customer_id !== null && sale.customer_id !== undefined
+      ? `Customer: ${sale.customer_name ?? 'N/A'} (ID: ${sale.customer_id})`
+      : `Customer: ${sale.customer_name ?? 'N/A'}`;
+
     const receiptContent = `
       <html>
         <head>
-          <title>Receipt - Sale #${sale.id}</title>
+          <title>Receipt - Sale #${displaySaleId}</title>
           <style>
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; }
             .receipt-container { width: 320px; margin: 0 auto; padding: 20px; }
@@ -159,10 +169,11 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
         <body>
           <div class="receipt-container">
             <div class="header">
-              <h2>Kisko App</h2>
+              <h2>${companyName}</h2>
               <p>Sale Receipt</p>
+              <p>Sale ID: ${displaySaleId}</p>
               <p>Date: ${datePipe.transform(sale.order_date, 'short')}</p>
-              <p>Customer: ${sale.customer_name ?? 'N/A'}</p>
+              <p>${customerLine}</p>
             </div>
             <table class="items-table">
               <thead>
@@ -176,6 +187,7 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
               <tbody>${itemsHtml}</tbody>
             </table>
             <div class="totals">
+              ${discountHtml}
               <div class="total-row grand-total">
                 <span>Grand Total:</span>
                 <span>${currencyPipe.transform(sale.total_amount)}</span>

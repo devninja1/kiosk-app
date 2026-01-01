@@ -14,9 +14,11 @@
     <mat-form-field appearance="outline" class="supplier-field">
       <mat-label>Supplier (Optional)</mat-label>
       <mat-select [(ngModel)]="selectedSupplierId">
-        <mat-option *ngFor="let supplier of (suppliers$ | async)" [value]="supplier.id">
-          {{ supplier.name }}
-        </mat-option>
+        @for (supplier of (suppliers$ | async); track supplier.id) {
+          <mat-option [value]="supplier.id">
+            {{ supplier.name }}
+          </mat-option>
+        }
       </mat-select>
     </mat-form-field>
     <button mat-raised-button color="primary" class="save-button" (click)="savePurchase()">

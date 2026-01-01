@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { from, Observable, of, tap, BehaviorSubject, switchMap, forkJoin } from 'rxjs';
+import { from, Observable, of, tap, BehaviorSubject, switchMap, forkJoin, map, catchError } from 'rxjs';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Sale } from '../../model/sale.model';
 import { SyncService } from './sync.service';
@@ -65,14 +65,53 @@ export class SalesService {
       tap(() => {
         const currentSales = this.sales$.getValue();
         this.sales$.next([...currentSales, tempSale]);
-        this.syncService.addToQueue({
-          url: this.apiUrl,
-          method: 'POST',
-          payload: { ...saleData, tempId }
-        });
+      }),
+      switchMap(() => {
+        // If online, try to save immediately and write back the order_id.
+        // If offline (or API errors), queue for later sync.
+        if (!this.isOnline) {
+          this.syncService.addToQueue({
+            url: this.apiUrl,
+            method: 'POST',
+            payload: { ...saleData, tempId }
+          });
+          return of(tempSale);
+        }
+
+        return this.http.post<any>(this.apiUrl, { ...saleData, tempId }).pipe(
+          switchMap((response) => {
+            const rawOrderId = response?.order_id ?? response?.orderId ?? response?.id;
+            const orderId = typeof rawOrderId === 'string' ? Number(rawOrderId) : rawOrderId;
+
+            if (!Number.isFinite(orderId)) {
+              return of(tempSale);
+            }
+
+            const updatedSale: Sale = { ...tempSale, order_id: orderId };
+            return from(this.dbService.update<Sale>('sales', updatedSale)).pipe(
+              tap(() => {
+                const currentSales = this.sales$.getValue();
+                const index = currentSales.findIndex(s => s.id === tempId);
+                if (index !== -1) {
+                  currentSales[index] = updatedSale;
+                  this.sales$.next([...currentSales]);
+                }
+              }),
+              map(() => updatedSale)
+            );
+          }),
+          catchError(() => {
+            this.syncService.addToQueue({
+              url: this.apiUrl,
+              method: 'POST',
+              payload: { ...saleData, tempId }
+            });
+            return of(tempSale);
+          })
+        );
       }),
       // Execute all stock updates
-      switchMap(() => forkJoin(stockUpdateObservables).pipe(switchMap(() => of(tempSale))))
+      switchMap((sale) => forkJoin(stockUpdateObservables).pipe(map(() => sale)))
     );
   }
 }

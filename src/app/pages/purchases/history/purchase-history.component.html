@@ -33,9 +33,11 @@
           <div class="element-detail" [@detailExpand]="element == expandedElement ? 'expanded' : 'collapsed'">
             <h4>Purchase Items</h4>
             <ul>
-              <li *ngFor="let item of element.items">
-                {{ item.product.name }} - {{ item.quantity }} x {{ item.product.cost_price | currency:'INR' }} = {{ item.total | currency:'INR' }}
-              </li>
+                @for (item of element.items; track $index) {
+                  <li>
+                    {{ item.product.name }} - {{ item.quantity }} x {{ item.product.cost_price | currency:'INR' }} = {{ item.total | currency:'INR' }}
+                  </li>
+                }
             </ul>
           </div>
         </td>
