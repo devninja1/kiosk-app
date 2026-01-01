@@ -14,6 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 
 import { Product } from '../../../model/product.model';
 import { SalesItem } from '../../../model/sales.model';
+import { ProductService } from '../../../core/services/product.service';
 
 @Component({
   selector: 'app-sales-entry',
@@ -45,18 +46,45 @@ export class SalesEntryComponent implements OnInit {
   selectedProduct: Product | null = null;
   quantity: number = 1;
   editableRate: number = 0;
+  canCreateNewProduct = false;
+  private lastSearchText = '';
+
+  constructor(private productService: ProductService) {}
 
   ngOnInit() {
     this.filteredProducts = this.productSearch.valueChanges.pipe(
       startWith(''),
       map(value => (typeof value === 'string' ? value : value?.name ?? '')),
-      map(name => (name ? this._filter(name) : this.products.slice())),
+      map(name => {
+        this.lastSearchText = (name ?? '').trim();
+        const list = this.lastSearchText ? this._filter(this.lastSearchText) : this.getSortedProducts(this.products);
+
+        // Only allow creation if user typed something and there are no matches and no product is selected.
+        this.canCreateNewProduct = !!this.lastSearchText && list.length === 0 && !this.selectedProduct;
+        if (this.canCreateNewProduct) {
+          this.quantity = 1;
+          if (!this.editableRate) this.editableRate = 0;
+        }
+
+        return list;
+      }),
     );
+  }
+
+  private getSortedProducts(products: Product[]): Product[] {
+    return [...products].sort((a, b) => {
+      const aOrder = a.display_order ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = b.display_order ?? Number.MAX_SAFE_INTEGER;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.name.localeCompare(b.name);
+    });
   }
 
   private _filter(name: string): Product[] {
     const filterValue = name.toLowerCase();
-    return this.products.filter(product => product.name.toLowerCase().includes(filterValue));
+    return this.getSortedProducts(
+      this.products.filter(product => product.name.toLowerCase().includes(filterValue))
+    );
   }
 
   displayProduct(product: Product): string {
@@ -66,6 +94,7 @@ export class SalesEntryComponent implements OnInit {
   onProductSelected(event: any) {
     this.selectedProduct = event.option.value;
     if (this.selectedProduct) {
+      this.canCreateNewProduct = false;
       this.quantity = 1;
       this.editableRate = this.selectedProduct.unit_price;
 
@@ -81,12 +110,51 @@ export class SalesEntryComponent implements OnInit {
   }
 
   get totalAmount(): number {
-    return this.selectedProduct ? this.editableRate * this.quantity : 0;
+    return (this.selectedProduct || this.canCreateNewProduct) ? this.editableRate * this.quantity : 0;
   }
 
   addItem() {
     if (!this.selectedProduct) {
-      return;
+      if (!this.canCreateNewProduct || !this.lastSearchText) {
+        return;
+      }
+
+      const name = this.lastSearchText;
+      const existing = this.products.find(p => p.name.trim().toLowerCase() === name.toLowerCase());
+      if (existing) {
+        this.selectedProduct = existing;
+        this.canCreateNewProduct = false;
+      } else {
+        this.productService.addProduct({
+          name,
+          category: 'Unknown',
+          description: '',
+          unit_price: this.editableRate,
+          cost_price: 0,
+          stock: 0,
+          is_Stock_enable: false,
+          is_active: true,
+          group: undefined,
+          display_order: undefined,
+        }).subscribe((createdProduct) => {
+          const discount = 0;
+          const subtotal = Math.max(0, (this.editableRate * this.quantity) - discount);
+
+          this.itemAdded.emit({
+            id: createdProduct.id,
+            product_code: createdProduct.product_code,
+            product_name: createdProduct.name,
+            unit_price: this.editableRate,
+            quantity: this.quantity,
+            discount,
+            subtotal,
+            updated_date: new Date(),
+          });
+
+          this.resetForm();
+        });
+        return;
+      }
     }
 
     const discount = 0;
@@ -108,6 +176,8 @@ export class SalesEntryComponent implements OnInit {
 
   private resetForm() {
     this.selectedProduct = null;
+    this.canCreateNewProduct = false;
+    this.lastSearchText = '';
     this.productSearch.setValue('');
     this.quantity = 1;
     this.editableRate = 0;

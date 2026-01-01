@@ -10,7 +10,9 @@
         @for (product of filteredProducts | async; track product.id) {
         <mat-option [value]="product" [class.added-product]="isProductAdded(product.name)">
           <span class="product-name">{{ product.name }}</span>
+          @if (product.is_Stock_enable) {
           <span class="stock-info">(Stock: {{ product.stock }})</span>
+          }
           <span class="fill-remaining-space"></span>
           @if (isProductAdded(product.name)) {
           <mat-icon class="added-icon">check_circle</mat-icon>
@@ -20,8 +22,8 @@
       </mat-autocomplete>
     </mat-form-field>
 
-    <!-- Selected Product Details -->
-    @if (selectedProduct) {
+    <!-- Selected Product Details / New Product Details -->
+    @if (selectedProduct || canCreateNewProduct) {
     <div class="sale-details">
       <mat-form-field class="rate-input">
         <mat-label>Unit Price</mat-label>
