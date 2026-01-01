@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { from, Observable, of, tap, BehaviorSubject, switchMap, forkJoin, map, catchError } from 'rxjs';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
-import { Sale } from '../../model/sale.model';
+import { Sale, SaleStatus } from '../../model/sale.model';
 import { SyncService } from './sync.service';
 import { ProductService } from './product.service';
 import { environment } from '../../../environments/environment';
@@ -52,14 +52,114 @@ export class SalesService {
     return this.sales$.asObservable();
   }
 
+  getSaleById(id: number): Observable<Sale | undefined> {
+    return from(this.dbService.getByID<Sale>('sales', id)).pipe(
+      map((sale) => sale ?? undefined)
+    );
+  }
+
+  findSaleByIdentifier(identifier: number): Observable<Sale | undefined> {
+    return from(this.dbService.getAll<Sale>('sales')).pipe(
+      map((sales) => sales.find(s => (s.order_id ?? s.id) === identifier))
+    );
+  }
+
+  updateSaleStatus(sale: Sale, status: SaleStatus): Observable<Sale> {
+    const updatedSale: Sale = { ...sale, status };
+
+    return from(this.dbService.update<Sale>('sales', updatedSale)).pipe(
+      tap(() => {
+        const currentSales = this.sales$.getValue();
+        const index = currentSales.findIndex(s => s.id === sale.id);
+        if (index !== -1) {
+          currentSales[index] = updatedSale;
+          this.sales$.next([...currentSales]);
+        }
+      }),
+      switchMap(() => {
+        const identifier = updatedSale.order_id ?? updatedSale.id;
+        const url = `${this.apiUrl}/${identifier}`;
+        const payload = { status: updatedSale.status, tempId: updatedSale.id, order_id: updatedSale.order_id };
+
+        if (!this.isOnline) {
+          this.syncService.addToQueue({ url, method: 'PATCH', payload });
+          return of(updatedSale);
+        }
+
+        return this.http.patch(url, payload).pipe(
+          map(() => updatedSale),
+          catchError(() => {
+            this.syncService.addToQueue({ url, method: 'PATCH', payload });
+            return of(updatedSale);
+          })
+        );
+      })
+    );
+  }
+
+  updateSale(sale: Sale): Observable<Sale> {
+    return from(this.dbService.update<Sale>('sales', sale)).pipe(
+      tap(() => {
+        const currentSales = this.sales$.getValue();
+        const index = currentSales.findIndex(s => s.id === sale.id);
+        if (index !== -1) {
+          currentSales[index] = sale;
+          this.sales$.next([...currentSales]);
+        }
+      }),
+      switchMap(() => {
+        const identifier = sale.order_id ?? sale.id;
+        const url = `${this.apiUrl}/${identifier}`;
+        const payload = { ...sale, tempId: sale.id, order_id: sale.order_id };
+
+        if (!this.isOnline) {
+          this.syncService.addToQueue({ url, method: 'PUT', payload });
+          return of(sale);
+        }
+
+        return this.http.put(url, payload).pipe(
+          map(() => sale),
+          catchError(() => {
+            this.syncService.addToQueue({ url, method: 'PUT', payload });
+            return of(sale);
+          })
+        );
+      })
+    );
+  }
+
+  deleteSale(sale: Sale): Observable<void> {
+    const identifier = sale.order_id ?? sale.id;
+    const url = `${this.apiUrl}/${identifier}`;
+
+    const deleteLocal$ = from(this.dbService.delete('sales', sale.id)).pipe(
+      tap(() => {
+        const currentSales = this.sales$.getValue();
+        this.sales$.next(currentSales.filter(s => s.id !== sale.id));
+      }),
+      map(() => undefined)
+    );
+
+    if (!this.isOnline) {
+      this.syncService.addToQueue({ url, method: 'DELETE', payload: { tempId: sale.id, order_id: sale.order_id } });
+      return deleteLocal$;
+    }
+
+    return this.http.delete(url).pipe(
+      switchMap(() => deleteLocal$),
+      catchError(() => {
+        this.syncService.addToQueue({ url, method: 'DELETE', payload: { tempId: sale.id, order_id: sale.order_id } });
+        return deleteLocal$;
+      })
+    );
+  }
+
   saveSale(saleData: Omit<Sale, 'id'>): Observable<Sale> {
     const tempId = -Date.now();
     const tempSale: Sale = { ...saleData, id: tempId };
 
-    // Create an array of stock update observables
-    const stockUpdateObservables = saleData.order_items.map(item =>
-      this.productService.updateStock(item.id, -item.quantity) // Decrease stock
-    );
+    // Stock is updated optimistically in the Sales UI while building the order.
+    // Avoid double-decrementing stock here.
 
     return from(this.dbService.add<Sale>('sales', tempSale)).pipe(
       tap(() => {
@@ -110,8 +210,7 @@ export class SalesService {
           })
         );
       }),
-      // Execute all stock updates
-      switchMap((sale) => forkJoin(stockUpdateObservables).pipe(map(() => sale)))
+      map((sale) => sale)
     );
   }
 }

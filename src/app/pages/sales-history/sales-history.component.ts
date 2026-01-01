@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -8,12 +8,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { Sale } from '../../model/sale.model';
+import { SaleStatus } from '../../model/sale.model';
 import { SalesItem } from '../../model/sales.model';
 import { SalesService } from '../../core/services/sales.service';
+import { ReceiptService } from '../../core/services/receipt.service';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatInputModule } from '@angular/material/input';
-import { environment } from '../../../environments/environment';
+import { animate, state, style, transition, trigger } from '@angular/animations';
 
 @Component({
   selector: 'app-sales-history',
@@ -23,10 +26,9 @@ import { environment } from '../../../environments/environment';
     MatTableModule,
     MatIconModule,
     MatButtonModule,
-    CurrencyPipe,
-    DatePipe,
     ReactiveFormsModule,
     MatFormFieldModule,
+    MatSelectModule,
     MatInputModule,
     MatDatepickerModule,
     MatNativeDateModule,
@@ -34,12 +36,21 @@ import { environment } from '../../../environments/environment';
   ],
   templateUrl: './sales-history.component.html',
   styleUrl: './sales-history.component.scss',
+  animations: [
+    trigger('detailExpand', [
+      state('collapsed', style({ height: '0px', minHeight: '0', visibility: 'hidden' })),
+      state('expanded', style({ height: '*', visibility: 'visible' })),
+      transition('expanded <=> collapsed', animate('225ms cubic-bezier(0.4, 0.0, 0.2, 1)')),
+    ]),
+  ],
 })
 export class SalesHistoryComponent implements OnInit, AfterViewInit {
   dataSource: MatTableDataSource<Sale>;
-  columnsToDisplay = ['expand', 'id', 'customer', 'order_date', 'total_amount', 'actions'];
+  columnsToDisplay = ['expand', 'id', 'customer', 'order_date', 'total_amount', 'status', 'actions'];
   expandedElement: Sale | null = null;
   private originalData: Sale[] = [];
+
+  statusOptions: SaleStatus[] = ['pending', 'completed', 'cancelled'];
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
@@ -50,6 +61,7 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
 
   constructor(
     private salesService: SalesService,
+    private receiptService: ReceiptService,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -73,8 +85,18 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
 
     this.salesService.getSales().subscribe(sales => {
       // Sort sales by most recent first
-      this.originalData = sales.sort((a, b) => b.id - a.id);
-      this.dataSource.data = this.originalData;
+      const sorted = [...sales].sort((a, b) => {
+        const timeA = new Date(a.order_date).getTime();
+        const timeB = new Date(b.order_date).getTime();
+        if (timeA !== timeB) return timeB - timeA;
+
+        const keyA = (a.order_id ?? a.id) ?? 0;
+        const keyB = (b.order_id ?? b.id) ?? 0;
+        return keyB - keyA;
+      });
+
+      this.originalData = sorted;
+      this.dataSource.data = sorted;
 
       // Check for initial query params after data is loaded
       this.route.queryParamMap.subscribe(params => {
@@ -124,87 +146,26 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
   }
 
   printReceipt(sale: Sale): void {
-    const currencyPipe = new CurrencyPipe('en-US');
-    const datePipe = new DatePipe('en-US');
-    const displaySaleId = sale.order_id ?? sale.id;
-    const companyName = environment.companyName;
-    const discountAmount = sale.discount ?? 0;
-    const discountHtml = discountAmount
-      ? `<div class="total-row"><span>Discount:</span><span>${currencyPipe.transform(discountAmount)}</span></div>`
-      : '';
+    this.receiptService.printSaleReceipt(sale);
+  }
 
-    const itemsHtml = sale.order_items.map(item => `
-      <tr>
-        <td>${item.product_name}</td>
-        <td class="text-right">${item.quantity}</td>
-        <td class="text-right">${currencyPipe.transform(item.unit_price)}</td>
-        <td class="text-right">${currencyPipe.transform(item.subtotal)}</td>
-      </tr>
-    `).join('');
+  onStatusChanged(sale: Sale, status: SaleStatus): void {
+    if (!sale || !status || sale.status === status) return;
+    this.salesService.updateSaleStatus(sale, status).subscribe();
+  }
 
-    const customerLine = sale.customer_id !== null && sale.customer_id !== undefined
-      ? `Customer: ${sale.customer_name ?? 'N/A'} (ID: ${sale.customer_id})`
-      : `Customer: ${sale.customer_name ?? 'N/A'}`;
+  editOrder(sale: Sale): void {
+    const identifier = sale.order_id ?? sale.id;
+    this.router.navigate(['/sales'], { queryParams: { editOrderId: identifier } });
+  }
 
-    const receiptContent = `
-      <html>
-        <head>
-          <title>Receipt - Sale #${displaySaleId}</title>
-          <style>
-            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; }
-            .receipt-container { width: 320px; margin: 0 auto; padding: 20px; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .header h2 { margin: 0; }
-            .header p { margin: 2px 0; font-size: 12px; }
-            .items-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            .items-table th, .items-table td { padding: 6px; text-align: left; border-bottom: 1px dashed #ccc; }
-            .items-table th { font-weight: 600; }
-            .items-table .text-right { text-align: right; }
-            .totals { margin-top: 20px; }
-            .totals .total-row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
-            .totals .grand-total { font-weight: bold; font-size: 16px; border-top: 1px solid #333; margin-top: 5px; }
-            .footer { text-align: center; margin-top: 20px; font-size: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="receipt-container">
-            <div class="header">
-              <h2>${companyName}</h2>
-              <p>Sale Receipt</p>
-              <p>Sale ID: ${displaySaleId}</p>
-              <p>Date: ${datePipe.transform(sale.order_date, 'short')}</p>
-              <p>${customerLine}</p>
-            </div>
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th class="text-right">Qty</th>
-                  <th class="text-right">Price</th>
-                  <th class="text-right">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>${itemsHtml}</tbody>
-            </table>
-            <div class="totals">
-              ${discountHtml}
-              <div class="total-row grand-total">
-                <span>Grand Total:</span>
-                <span>${currencyPipe.transform(sale.total_amount)}</span>
-              </div>
-            </div>
-            <div class="footer">
-              <p>Thank you for your business!</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+  deleteOrder(sale: Sale): void {
+    this.salesService.deleteSale(sale).subscribe();
+  }
 
-    const printWindow = window.open('', '_blank');
-    printWindow?.document.write(receiptContent);
-    printWindow?.document.close();
-    printWindow?.print();
+  toggleExpanded(element: Sale, event?: Event): void {
+    event?.stopPropagation();
+    this.expandedElement = this.expandedElement === element ? null : element;
   }
 
   trackByProduct(index: number, item: SalesItem): number {

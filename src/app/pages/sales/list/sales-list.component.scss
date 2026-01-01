@@ -9,23 +9,24 @@ mat-card-title {
   gap: 16px;
   padding: 12px 8px;
   align-items: center;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.08));
 }
 
 .sales-list-header {
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.6));
   border-bottom-width: 2px;
-  border-bottom-color: rgba(0, 0, 0, 0.12);
+  border-bottom-color: var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
 }
 
-.sales-list-item.added-item {
+.sales-list-item {
   border-radius: 4px;
   margin-bottom: 4px;
-  background-color: #e8f5e9;
-  border: 1px solid #a5d6a7;
-  color: #2e7d32;
-  font-weight: 500;
+  background-color: var(--mat-sys-surface, transparent);
+}
+
+.sales-list-item.row-alt {
+  background-color: var(--mat-sys-surface-container-low, transparent);
 }
 
 .col-rate,
@@ -35,6 +36,18 @@ mat-card-title {
   text-align: right;
 }
 
+.qty-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.qty-value {
+  min-width: 24px;
+  text-align: center;
+}
+
 .sales-list-footer {
   display: flex;
   justify-content: flex-end;
@@ -42,5 +55,5 @@ mat-card-title {
   font-weight: bold;
   padding: 16px 8px 0;
   margin-top: 8px;
-  border-top: 2px solid var(--mat-primary-500, #00bcd4);
+  border-top: 2px solid var(--mat-sys-primary, var(--mat-primary-500, #00bcd4));
 }

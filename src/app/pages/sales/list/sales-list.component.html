@@ -9,11 +9,30 @@
         <span class="col-total">Subtotal</span>
         <span class="col-actions"></span>
       </div>
-      @for (item of salesList; track trackByProduct(i, item); let i = $index) {
-        <div class="sales-list-item added-item">
+      @for (item of salesList; track trackByProduct($index, item); let i = $index) {
+        <div class="sales-list-item" [class.row-alt]="i % 2 === 1">
           <span class="col-product">{{ item.product_name }}</span>
           <span class="col-rate">{{ item.unit_price | currency:'INR':'symbol' }}</span>
-          <span class="col-qty">{{ item.quantity }}</span>
+          <span class="col-qty">
+            <span class="qty-control">
+              <button
+                mat-icon-button
+                type="button"
+                aria-label="Decrease quantity"
+                (click)="decreaseQty(i)"
+                [disabled]="item.quantity <= 1">
+                <mat-icon>remove</mat-icon>
+              </button>
+              <span class="qty-value">{{ item.quantity }}</span>
+              <button
+                mat-icon-button
+                type="button"
+                aria-label="Increase quantity"
+                (click)="increaseQty(i)">
+                <mat-icon>add</mat-icon>
+              </button>
+            </span>
+          </span>
           <span class="col-total">{{ item.subtotal | currency:'INR':'symbol' }}</span>
           <span class="col-actions">
             <button mat-icon-button color="warn" (click)="deleteItem(i)" aria-label="Delete item">

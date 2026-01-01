@@ -1,4 +1,38 @@
 <div class="sales-container">
+  @if (lastSavedSale) {
+    <mat-card class="sale-summary-card mat-elevation-z2">
+      <div class="sale-summary-header">
+        <div class="sale-summary-title">Sale Summary</div>
+        <button mat-icon-button type="button" aria-label="Close sale summary" (click)="dismissSaleSummary()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <mat-card-content>
+        <div>Sale ID: {{ lastSavedSaleId }}</div>
+        <div>
+          Customer:
+          {{ lastSavedSale.customer_name }}
+          @if (lastSavedSale.customer_id !== null && lastSavedSale.customer_id !== undefined) {
+            <span class="customer-id">(ID: {{ lastSavedSale.customer_id }})</span>
+          }
+        </div>
+        <div>Items: {{ lastSavedSale.order_items.length }}</div>
+        <div>Discount: {{ lastSavedSale.discount | currency:'INR':'symbol' }}</div>
+        <div>Total: {{ lastSavedSale.total_amount | currency:'INR':'symbol' }}</div>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-raised-button color="primary" (click)="printLastSavedSale()">
+          <mat-icon>print</mat-icon>
+          Print Receipt
+        </button>
+        <button mat-stroked-button (click)="editLastSavedSale()">
+          <mat-icon>edit</mat-icon>
+          Edit Order
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  }
+
   <div class="customer-selection">
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Search for a Customer</mat-label>
@@ -30,13 +64,19 @@
 
   <app-sales-list
     [salesList]="salesList"
-    (itemDeleted)="onItemDeleted($event)">
+    (itemDeleted)="onItemDeleted($event)"
+    (quantityChanged)="onQuantityChanged($event)">
   </app-sales-list>
 
   @if (salesList.length > 0) {
     <div class="save-sale-container">
-      <button mat-icon-button mat-raised-button color="primary" class="save-button" (click)="saveSale()">
-        <mat-icon>save</mat-icon>Save Sale      
+      <button mat-raised-button color="primary" class="save-button" (click)="saveSale()">
+        <mat-icon>save</mat-icon>
+        @if (isEditing) {
+          Update Sale
+        } @else {
+          Save Sale
+        }
       </button>
     </div>
   }

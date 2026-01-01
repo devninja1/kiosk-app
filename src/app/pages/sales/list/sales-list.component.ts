@@ -16,6 +16,7 @@ import { SalesItem } from '../../../model/sales.model';
 export class SalesListComponent {
   @Input() salesList: SalesItem[] = [];
   @Output() itemDeleted = new EventEmitter<number>();
+  @Output() quantityChanged = new EventEmitter<{ index: number; delta: number }>();
 
   get grandTotal(): number {
     if (!this.salesList || this.salesList.length === 0) {
@@ -31,5 +32,15 @@ export class SalesListComponent {
 
   deleteItem(index: number): void {
     this.itemDeleted.emit(index);
+  }
+
+  increaseQty(index: number): void {
+    this.quantityChanged.emit({ index, delta: 1 });
+  }
+
+  decreaseQty(index: number): void {
+    const item = this.salesList[index];
+    if (!item || item.quantity <= 1) return;
+    this.quantityChanged.emit({ index, delta: -1 });
   }
 }

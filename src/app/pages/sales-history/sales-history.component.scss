@@ -45,4 +45,74 @@ tr.detail-row {
 
 .customer-id {
   font-size: 12px;
+  margin-left: 4px;
+}
+
+.status-field {
+  width: 140px;
+}
+
+.status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.status-icon--completed {
+  color: var(--mat-sys-primary, inherit);
+}
+
+.status-icon--pending {
+  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.6));
+}
+
+.status-icon--cancelled {
+  color: var(--mat-sys-error, inherit);
+}
+
+/* Make table rows a bit more compact */
+:host ::ng-deep .mat-mdc-header-cell,
+:host ::ng-deep .mat-mdc-cell {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+/* Reduce overall row height */
+:host ::ng-deep .mat-mdc-header-row,
+:host ::ng-deep .mat-mdc-row {
+  height: 28px;
+}
+
+:host ::ng-deep .mat-mdc-cell,
+:host ::ng-deep .mat-mdc-header-cell {
+  line-height: 16px;
+}
+
+/* Compact action/expand icon buttons inside the table */
+:host ::ng-deep table .mat-mdc-icon-button.mat-mdc-button-base {
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+}
+
+/* Compact the status dropdown field so it doesn't force tall rows */
+:host ::ng-deep .status-field .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+:host ::ng-deep .status-field .mat-mdc-text-field-wrapper {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+:host ::ng-deep .status-field .mat-mdc-form-field-infix {
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
