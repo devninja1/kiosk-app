@@ -14,11 +14,12 @@ registerLocaleData(localeIn);
 
 const dbConfig: DBConfig = {
   name: 'KiskoAppDb',
-  version: 2,
+  version: 3,
   objectStoresMeta: [{
     store: 'products',
     storeConfig: { keyPath: 'id', autoIncrement: true },
     storeSchema: [
+      { name: 'product_code', keypath: 'product_code', options: { unique: false } },
       { name: 'name', keypath: 'name', options: { unique: false } }
     ]
   }, {
