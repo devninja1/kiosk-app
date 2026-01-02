@@ -4,6 +4,7 @@ import { from, Observable, of, switchMap, tap, map, BehaviorSubject, concatMap }
 import { NgxIndexedDBService, WithID } from 'ngx-indexed-db';
 import { Product } from '../../model/product.model';
 import { SyncService } from './sync.service';
+import { ApiStatusService } from './api-status.service';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -11,7 +12,6 @@ import { environment } from '../../../environments/environment';
 })
 export class ProductService {
   private apiUrl = `${environment.apiUrl}/product`;
-  private isOnline = navigator.onLine;
   private products$ = new BehaviorSubject<Product[]>([]);
   private readonly productCodePrefix = 'PR';
   private defaultProducts: Product[] = [
@@ -25,10 +25,9 @@ export class ProductService {
   constructor(
     private http: HttpClient,
     private dbService: NgxIndexedDBService,
-    private syncService: SyncService
+    private syncService: SyncService,
+    private apiStatus: ApiStatusService
   ) {
-    window.addEventListener('online', () => this.isOnline = true);
-    window.addEventListener('offline', () => this.isOnline = false);
     this.loadInitialData();
   }
 
@@ -38,14 +37,14 @@ export class ProductService {
         //// DB is empty, populate with default data first.
         this.dbService.bulkAdd<Product>('products', this.defaultProducts).subscribe(() => {
           this.products$.next(this.defaultProducts);
-          if (this.isOnline) this.syncWithApi();
+          if (this.apiStatus.isOnlineNow()) this.syncWithApi();
         });
       } else {
       ////DB has data, load it and then sync if online.
       this.dbService.getAll<Product>('products').subscribe(prods => {
         console.log('Loaded products from IndexedDB:', prods);
         this.products$.next(prods);
-        if (this.isOnline) this.syncWithApi();
+        if (this.apiStatus.isOnlineNow()) this.syncWithApi();
       });
       }
     });

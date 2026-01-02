@@ -4,6 +4,7 @@ import { from, Observable, of, switchMap, tap, BehaviorSubject, map, catchError,
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Customer } from '../../model/customer.model';
 import { SyncService } from './sync.service';
+import { ApiStatusService } from './api-status.service';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -11,7 +12,6 @@ import { environment } from '../../../environments/environment';
 })
 export class CustomerService {
   private apiUrl = `${environment.apiUrl}/customers`;
-  private isOnline = navigator.onLine;
   private customers$ = new BehaviorSubject<Customer[]>([]);
   private defaultCustomers: Customer[] = [
     {
@@ -30,10 +30,9 @@ export class CustomerService {
   constructor(
     private http: HttpClient,
     private dbService: NgxIndexedDBService,
-    private syncService: SyncService
+    private syncService: SyncService,
+    private apiStatus: ApiStatusService
   ) {
-    window.addEventListener('online', () => this.isOnline = true);
-    window.addEventListener('offline', () => this.isOnline = false);
     this.loadInitialData();
   }
 
@@ -53,7 +52,7 @@ export class CustomerService {
         }
       }),
       tap(() => {
-        if (this.isOnline) {
+        if (this.apiStatus.isOnlineNow()) {
           this.syncWithApi().subscribe();
         }
       }),

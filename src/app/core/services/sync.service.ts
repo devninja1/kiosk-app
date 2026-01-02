@@ -4,6 +4,7 @@ import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { EMPTY, Observable, Subject, BehaviorSubject, catchError, concatMap, finalize, from, fromEvent, map, merge, of, switchMap, tap, throwError } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { takeUntil, distinctUntilChanged } from 'rxjs/operators';
+import { ApiStatusService } from './api-status.service';
 
 export interface QueuedRequest {
   id?: number;
@@ -22,7 +23,7 @@ export interface FailedRequest extends QueuedRequest {
 })
 export class SyncService {
   private destroy$ = new Subject<void>();
-  private online$ = new BehaviorSubject<boolean>(navigator.onLine);
+  private online$ = new BehaviorSubject<boolean>(false);
   private pendingRequests$ = new BehaviorSubject<QueuedRequest[]>([]);
   private failedRequests$ = new BehaviorSubject<FailedRequest[]>([]);
   private isProcessingQueue = false;
@@ -31,23 +32,24 @@ export class SyncService {
   constructor(
     private http: HttpClient,
     private dbService: NgxIndexedDBService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private apiStatus: ApiStatusService
   ) {
+    this.online$.next(this.apiStatus.isOnlineNow());
     this.init();
     this.refreshQueues();
   }
 
   private init(): void {
-    merge(
-      of(navigator.onLine),
-      fromEvent(window, 'online').pipe(map(() => true)),
-      fromEvent(window, 'offline').pipe(map(() => false))
-    ).pipe(distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(isOnline => {
-      this.online$.next(isOnline);
-      if (isOnline) {
-        this.processQueue();
-      }
-    });
+    this.apiStatus
+      .isOnline$()
+      .pipe(distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(isOnline => {
+        this.online$.next(isOnline);
+        if (isOnline) {
+          this.processQueue();
+        }
+      });
   }
 
   isOnline(): Observable<boolean> {
@@ -148,7 +150,12 @@ export class SyncService {
     return this.executeRequest(req).pipe(
       switchMap(() => this.dbService.delete('sync-queue', req.id!)),
       tap(() => {
-        this.snackBar.open('An item was synced successfully.', 'Close', { duration: 2000 });
+        const urlLower = req.url.toLowerCase();
+        const isSales = urlLower.includes('sales');
+        this.snackBar.open(isSales ? 'Sales synced successfully.' : 'An item was synced successfully.', 'Close', {
+          duration: 2000,
+          panelClass: isSales ? ['success-snackbar'] : undefined
+        });
         this.refreshQueues();
       }),
       map(() => undefined),
@@ -161,14 +168,16 @@ export class SyncService {
       tap((response: any) => {
         if (req.method === 'POST' && req.payload?.tempId) {
           // This was an offline creation; update local record with server response.
+          const urlLower = req.url.toLowerCase();
           let storeName;
-          if (req.url.includes('products')) {
+          if (urlLower.includes('products')) {
             storeName = 'products';
-          } else if (req.url.includes('customers')) {
+          } else if (urlLower.includes('customers')) {
             storeName = 'customers';
-          } else if (req.url.includes('sales')) {
+          } else if (urlLower.includes('sales')) {
+            // Handles urls like /sales and /SalesOrder
             storeName = 'sales';
-          } else if (req.url.includes('purchases')) {
+          } else if (urlLower.includes('purchases')) {
             storeName = 'purchases';
           }
           if (storeName) {
@@ -236,11 +245,40 @@ export class SyncService {
       if (record) {
         // Delete the temporary local record
         this.dbService.delete(storeName, tempId).subscribe(() => {
-          // Add the permanent record from the server
-          this.dbService.add(storeName, serverResponse).subscribe();
+          // Add the permanent record from the server (normalize for local stores when needed)
+          const normalized = this.normalizeServerRecordForStore(storeName, serverResponse);
+          this.dbService.add(storeName, normalized).subscribe();
         });
       }
     });
+  }
+
+  private normalizeServerRecordForStore(storeName: string, serverResponse: any): any {
+    if (!serverResponse) return serverResponse;
+
+    if (storeName === 'sales') {
+      // API returns SalesOrder DTO with `order_id` and `orderItems`.
+      // Local app uses `id` as keyPath and `order_items` for UI.
+      const orderId = serverResponse?.order_id ?? serverResponse?.orderId ?? serverResponse?.id;
+      const normalized: any = {
+        ...serverResponse,
+        id: typeof orderId === 'string' ? Number(orderId) : orderId,
+        order_id: serverResponse?.order_id ?? orderId,
+      };
+
+      if (Array.isArray(serverResponse?.orderItems) && !Array.isArray(serverResponse?.order_items)) {
+        normalized.order_items = serverResponse.orderItems;
+      }
+
+      // Avoid keeping both shapes around.
+      if ('orderItems' in normalized) {
+        delete normalized.orderItems;
+      }
+
+      return normalized;
+    }
+
+    return serverResponse;
   }
 
   private moveToFailedQueue(request: QueuedRequest, error: any) {

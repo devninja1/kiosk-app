@@ -5,12 +5,19 @@ import {
 import { inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, throwError } from 'rxjs';
+import { ApiStatusService } from '../services/api-status.service';
 
 export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const snackBar = inject(MatSnackBar);
+  const apiStatus = inject(ApiStatusService);
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
+      // If we're offline / API unreachable, don't spam server error snackbars.
+      if (!apiStatus.isOnlineNow() || error.status === 0) {
+        return throwError(() => error);
+      }
+
       let errorMessage = 'An unknown error occurred!';
       if (error.error instanceof ErrorEvent) {
         // A client-side or network error occurred.

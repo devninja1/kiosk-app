@@ -43,6 +43,19 @@ body {
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
+/* Snackbars */
+.mat-mdc-snack-bar-container.success-snackbar {
+  --mdc-snackbar-container-color: var(--mat-sys-primary);
+  --mdc-snackbar-supporting-text-color: var(--mat-sys-on-primary);
+  --mat-mdc-snack-bar-button-color: var(--mat-sys-on-primary);
+}
+
+.mat-mdc-snack-bar-container.offline-snackbar {
+  --mdc-snackbar-container-color: var(--mat-sys-surface-variant);
+  --mdc-snackbar-supporting-text-color: var(--mat-sys-on-surface-variant);
+  --mat-mdc-snack-bar-button-color: var(--mat-sys-on-surface-variant);
+}
+
 // styles.scss
 .container {
   padding: 1rem;

@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,7 +6,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { Sale } from '../../model/sale.model';
@@ -44,11 +44,14 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
     ]),
   ],
 })
-export class SalesHistoryComponent implements OnInit, AfterViewInit {
+export class SalesHistoryComponent implements OnInit {
   dataSource: MatTableDataSource<Sale>;
   columnsToDisplay = ['expand', 'id', 'customer', 'order_date', 'total_amount', 'status', 'actions'];
   expandedElement: Sale | null = null;
-  private originalData: Sale[] = [];
+  totalCount = 0;
+  pageSize = 10;
+  pageIndex = 0;
+  isLoading = false;
 
   statusOptions: SaleStatus[] = ['pending', 'completed', 'cancelled'];
 
@@ -83,43 +86,32 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
       return saleDate >= startDate && saleDate <= endDate;
     };
 
-    this.salesService.getSales().subscribe(sales => {
-      // Sort sales by most recent first
-      const sorted = [...sales].sort((a, b) => {
-        const timeA = new Date(a.order_date).getTime();
-        const timeB = new Date(b.order_date).getTime();
-        if (timeA !== timeB) return timeB - timeA;
-
-        const keyA = (a.order_id ?? a.id) ?? 0;
-        const keyB = (b.order_id ?? b.id) ?? 0;
-        return keyB - keyA;
-      });
-
-      this.originalData = sorted;
-      this.dataSource.data = sorted;
-
-      // Check for initial query params after data is loaded
-      this.route.queryParamMap.subscribe(params => {
-        const start = params.get('start');
-        const end = params.get('end');
-        if (start && end) {
-          this.range.setValue({
-            start: new Date(start),
-            end: new Date(end)
-          }, { emitEvent: false }); // Prevent valueChanges from firing again
-          this.applyDateFilter();
-        }
-      });
+    // Read initial query params (date range) and load first page.
+    this.route.queryParamMap.subscribe(params => {
+      const start = params.get('start');
+      const end = params.get('end');
+      if (start && end) {
+        this.range.setValue({
+          start: new Date(start),
+          end: new Date(end)
+        }, { emitEvent: false });
+        this.applyDateFilter();
+      }
+      this.loadPage(0, this.pageSize);
     });
 
     this.range.valueChanges.subscribe(val => {
       this.applyDateFilter();
       this.updateUrlQueryParams();
+      // When date range changes, restart paging from the beginning.
+      this.loadPage(0, this.pageSize);
     });
   }
 
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+  onPageChange(event: PageEvent): void {
+    this.pageIndex = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.loadPage(this.pageIndex, this.pageSize);
   }
 
   clearDateFilter(): void {
@@ -130,6 +122,30 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
   private applyDateFilter(): void {
     const { start, end } = this.range.value;
     this.dataSource.filter = (start && end) ? JSON.stringify({ start, end }) : '';
+  }
+
+  private loadPage(pageIndex: number, pageSize: number): void {
+    this.isLoading = true;
+    this.expandedElement = null;
+
+    const { start, end } = this.range.value;
+    const range = { start: start ?? null, end: end ?? null };
+    this.salesService.fetchSalesPage(pageIndex, pageSize, range).subscribe({
+      next: (res) => {
+        this.pageIndex = pageIndex;
+        this.pageSize = pageSize;
+        this.totalCount = res.totalCount ?? (res.items?.length ?? 0);
+        this.dataSource.data = res.items ?? [];
+        // Keep existing filter behavior (online filter applies to the current page only).
+        this.applyDateFilter();
+      },
+      error: () => {
+        this.dataSource.data = [];
+      },
+      complete: () => {
+        this.isLoading = false;
+      }
+    });
   }
 
   private updateUrlQueryParams(): void {
@@ -151,7 +167,9 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
 
   onStatusChanged(sale: Sale, status: SaleStatus): void {
     if (!sale || !status || sale.status === status) return;
-    this.salesService.updateSaleStatus(sale, status).subscribe();
+    this.salesService.updateSaleStatus(sale, status).subscribe(updated => {
+      sale.status = updated.status;
+    });
   }
 
   editOrder(sale: Sale): void {
@@ -160,7 +178,9 @@ export class SalesHistoryComponent implements OnInit, AfterViewInit {
   }
 
   deleteOrder(sale: Sale): void {
-    this.salesService.deleteSale(sale).subscribe();
+    this.salesService.deleteSale(sale).subscribe(() => {
+      this.loadPage(this.pageIndex, this.pageSize);
+    });
   }
 
   toggleExpanded(element: Sale, event?: Event): void {

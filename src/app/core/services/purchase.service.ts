@@ -5,6 +5,7 @@ import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Purchase } from '../../model/purchase.model';
 import { SyncService } from './sync.service';
 import { ProductService } from './product.service';
+import { ApiStatusService } from './api-status.service';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -12,24 +13,22 @@ import { environment } from '../../../environments/environment';
 })
 export class PurchaseService {
   private apiUrl = `${environment.apiUrl}/purchases`;
-  private isOnline = navigator.onLine;
   private purchases$ = new BehaviorSubject<Purchase[]>([]);
 
   constructor(
     private http: HttpClient,
     private dbService: NgxIndexedDBService,
     private syncService: SyncService,
-    private productService: ProductService // Inject ProductService
+    private productService: ProductService, // Inject ProductService
+    private apiStatus: ApiStatusService
   ) {
-    window.addEventListener('online', () => this.isOnline = true);
-    window.addEventListener('offline', () => this.isOnline = false);
     this.loadInitialData();
   }
 
   private loadInitialData(): void {
     this.dbService.getAll<Purchase>('purchases').pipe(
       tap(purchases => this.purchases$.next(purchases)),
-      switchMap(() => this.isOnline ? this.syncWithApi() : of(null))
+      switchMap(() => (this.apiStatus.isOnlineNow() ? this.syncWithApi() : of(null)))
     ).subscribe();
   }
 

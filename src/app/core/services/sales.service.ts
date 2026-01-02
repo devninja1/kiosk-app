@@ -1,10 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { from, Observable, of, tap, BehaviorSubject, switchMap, forkJoin, map, catchError } from 'rxjs';
+import { concatMap, from, Observable, of, tap, BehaviorSubject, switchMap, map, catchError, toArray } from 'rxjs';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Sale, SaleStatus } from '../../model/sale.model';
+import { SalesItem } from '../../model/sales.model';
+import { PaginatedResponse } from '../../model/paginated-response.model';
 import { SyncService } from './sync.service';
 import { ProductService } from './product.service';
+import { ApiStatusService } from './api-status.service';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -12,40 +15,164 @@ import { environment } from '../../../environments/environment';
 })
 export class SalesService {
   private apiUrl = `${environment.apiUrl}/SalesOrder`;
-  private isOnline = navigator.onLine;
   private sales$ = new BehaviorSubject<Sale[]>([]);
+  private readonly defaultPage = 1;
+  private readonly defaultPageSize = 5;
 
   constructor(
     private http: HttpClient,
     private dbService: NgxIndexedDBService,
     private syncService: SyncService,
-    private productService: ProductService // Inject ProductService
+    private productService: ProductService, // Inject ProductService
+    private apiStatus: ApiStatusService
   ) {
-    window.addEventListener('online', () => this.isOnline = true);
-    window.addEventListener('offline', () => this.isOnline = false);
+    this.apiStatus.isOnline$().subscribe(isOnline => {
+      if (isOnline) {
+        // When connectivity returns, refresh from API.
+        this.syncWithApi().subscribe();
+      }
+    });
     this.loadInitialData();
   }
 
   private loadInitialData(): void {
-    this.dbService.getAll<Sale>('sales').pipe(
-      tap(sales => this.sales$.next(sales)),
-      switchMap(() => {
-        if (this.isOnline) {
-          return this.syncWithApi();
-        }
-        return of(null);
-      })
-    ).subscribe();
+    if (this.apiStatus.isOnlineNow()) {
+      this.syncWithApi().subscribe();
+      return;
+    }
+
+    this.dbService.getAll<Sale>('sales')
+      .pipe(tap(sales => this.sales$.next(sales)))
+      .subscribe();
   }
 
   private syncWithApi(): Observable<Sale[]> {
-    return this.http.get<Sale[]>(this.apiUrl).pipe(
-      switchMap(sales => this.dbService.clear('sales').pipe(
-        switchMap(() => this.dbService.bulkAdd<Sale>('sales', sales)),
-        switchMap(() => this.dbService.getAll<Sale>('sales'))
-      )),
-      tap(sales => this.sales$.next(sales))
+    return this.fetchSalesPage(this.defaultPage - 1, this.defaultPageSize).pipe(
+      map(res => res.items),
+      tap(items => this.sales$.next(items))
     );
+  }
+
+  fetchSalesPage(
+    pageIndex: number,
+    pageSize: number,
+    dateRange?: { start: Date | null; end: Date | null }
+  ): Observable<PaginatedResponse<Sale>> {
+    if (this.apiStatus.isOnlineNow()) {
+      return this.fetchSalesPageOnline(pageIndex, pageSize);
+    }
+
+    return this.fetchSalesPageOffline(pageIndex, pageSize, dateRange);
+  }
+
+  private fetchSalesPageOnline(pageIndex: number, pageSize: number): Observable<PaginatedResponse<Sale>> {
+    const page = pageIndex + 1;
+    const url = `${this.apiUrl}?page=${page}&pageSize=${pageSize}`;
+
+    return this.http.get<PaginatedResponse<Sale>>(url).pipe(
+      map((res) => {
+        const mappedItems = (res?.items ?? []).map((api) => this.mapApiSale(api));
+        return { ...res, page, pageSize, items: mappedItems };
+      }),
+      tap((res) => {
+        // Cache API items for offline use. Never touch temp (negative id) local sales.
+        this.upsertSalesToIndexedDb(res.items.filter(s => s.id > 0)).subscribe();
+      })
+    );
+  }
+
+  private fetchSalesPageOffline(
+    pageIndex: number,
+    pageSize: number,
+    dateRange?: { start: Date | null; end: Date | null }
+  ): Observable<PaginatedResponse<Sale>> {
+    return this.dbService.getAll<Sale>('sales').pipe(
+      map((sales) => {
+        let filtered = (sales ?? []).map(s => this.mapApiSale(s));
+
+        // Optional date filter (works offline across all cached sales)
+        const start = dateRange?.start ?? null;
+        const end = dateRange?.end ?? null;
+        if (start && end) {
+          const startDate = new Date(start);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(end);
+          endDate.setHours(23, 59, 59, 999);
+
+          filtered = filtered.filter(s => {
+            const d = new Date(s.order_date);
+            return d >= startDate && d <= endDate;
+          });
+        }
+
+        // Sort by most recent first
+        filtered.sort((a, b) => {
+          const timeA = new Date(a.order_date).getTime();
+          const timeB = new Date(b.order_date).getTime();
+          if (timeA !== timeB) return timeB - timeA;
+          const keyA = (a.order_id ?? a.id) ?? 0;
+          const keyB = (b.order_id ?? b.id) ?? 0;
+          return keyB - keyA;
+        });
+
+        const totalCount = filtered.length;
+        const totalPages = pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0;
+        const startIndex = pageIndex * pageSize;
+        const pageItems = pageSize > 0 ? filtered.slice(startIndex, startIndex + pageSize) : [];
+
+        return {
+          page: pageIndex + 1,
+          pageSize,
+          totalCount,
+          totalPages,
+          items: pageItems
+        };
+      })
+    );
+  }
+
+  private upsertSalesToIndexedDb(items: Sale[]): Observable<Sale[]> {
+    if (!items.length) return of([]);
+
+    return from(items).pipe(
+      concatMap((sale) =>
+        this.dbService.update<Sale>('sales', sale).pipe(
+          catchError(() => this.dbService.add<Sale>('sales', sale)),
+          map(() => sale)
+        )
+      ),
+      toArray()
+    );
+  }
+
+  private mapApiSale(api: Sale): Sale {
+    const orderId = (api as any)?.order_id ?? (api as any)?.orderId ?? (api as any)?.id;
+    const id = typeof orderId === 'string' ? Number(orderId) : orderId;
+    const rawItems = (api as any)?.order_items ?? (api as any)?.orderItems ?? [];
+
+    return {
+      id: Number.isFinite(id) ? id : 0,
+      order_id: Number.isFinite(id) ? id : undefined,
+      customer_id: api.customer_id ?? null,
+      customer_name: api.customer_name,
+      group: api.group,
+      status: this.coerceSaleStatus(api.status),
+      discount: api.discount ?? 0,
+      is_review: Boolean(api.is_review),
+      order_items: (rawItems as SalesItem[]).map((i) => ({
+        ...i,
+        updated_date: new Date((i as any).updated_date)
+      })),
+      total_amount: api.total_amount ?? 0,
+      order_date: new Date(api.order_date)
+    };
+  }
+
+  private coerceSaleStatus(status: string): SaleStatus {
+    if (status === 'pending' || status === 'completed' || status === 'cancelled') {
+      return status;
+    }
+    return 'pending';
   }
 
   getSales(): Observable<Sale[]> {
@@ -61,6 +188,98 @@ export class SalesService {
   findSaleByIdentifier(identifier: number): Observable<Sale | undefined> {
     return from(this.dbService.getAll<Sale>('sales')).pipe(
       map((sales) => sales.find(s => (s.order_id ?? s.id) === identifier))
+    );
+  }
+
+  saveSaleWithStatus(saleData: Omit<Sale, 'id'>): Observable<{ sale: Sale; savedOnline: boolean }> {
+    const tempId = -Date.now();
+    const tempSale: Sale = { ...saleData, id: tempId };
+
+    return from(this.dbService.add<Sale>('sales', tempSale)).pipe(
+      tap(() => {
+        const currentSales = this.sales$.getValue();
+        this.sales$.next([...currentSales, tempSale]);
+      }),
+      switchMap(() => {
+        const { order_items, ...rest } = saleData as any;
+        const payload = { ...rest, order_items: order_items ?? [], tempId };
+
+        if (!this.apiStatus.isOnlineNow()) {
+          this.syncService.addToQueue({
+            url: this.apiUrl,
+            method: 'POST',
+            payload
+          });
+          return of({ sale: tempSale, savedOnline: false });
+        }
+
+        return this.http.post<any>(this.apiUrl, payload).pipe(
+          switchMap((response) => {
+            const rawOrderId = response?.order_id ?? response?.orderId ?? response?.id;
+            const orderId = typeof rawOrderId === 'string' ? Number(rawOrderId) : rawOrderId;
+
+            // If backend returns an id, store it on the temp record.
+            if (Number.isFinite(orderId)) {
+              const updatedSale: Sale = { ...tempSale, order_id: orderId };
+              return from(this.dbService.update<Sale>('sales', updatedSale)).pipe(
+                tap(() => {
+                  const currentSales = this.sales$.getValue();
+                  const index = currentSales.findIndex(s => s.id === tempId);
+                  if (index !== -1) {
+                    currentSales[index] = updatedSale;
+                    this.sales$.next([...currentSales]);
+                  }
+                }),
+                map(() => ({ sale: updatedSale, savedOnline: true }))
+              );
+            }
+
+            // Request succeeded but id wasn't returned; still treat as online save.
+            return of({ sale: tempSale, savedOnline: true });
+          }),
+          catchError(() => {
+            // Treat as offline: queue for later sync.
+            this.syncService.addToQueue({
+              url: this.apiUrl,
+              method: 'POST',
+              payload
+            });
+            return of({ sale: tempSale, savedOnline: false });
+          })
+        );
+      })
+    );
+  }
+
+  updateSaleWithStatus(sale: Sale): Observable<{ sale: Sale; savedOnline: boolean }> {
+    return from(this.dbService.update<Sale>('sales', sale)).pipe(
+      tap(() => {
+        const currentSales = this.sales$.getValue();
+        const index = currentSales.findIndex(s => s.id === sale.id);
+        if (index !== -1) {
+          currentSales[index] = sale;
+          this.sales$.next([...currentSales]);
+        }
+      }),
+      switchMap(() => {
+        const identifier = sale.order_id ?? sale.id;
+        const url = `${this.apiUrl}/${identifier}`;
+        const { order_items, ...rest } = sale as any;
+        const payload = { ...rest, order_items: order_items ?? [], tempId: sale.id, order_id: sale.order_id };
+
+        if (!this.apiStatus.isOnlineNow()) {
+          this.syncService.addToQueue({ url, method: 'PUT', payload });
+          return of({ sale, savedOnline: false });
+        }
+
+        return this.http.put(url, payload).pipe(
+          map(() => ({ sale, savedOnline: true })),
+          catchError(() => {
+            this.syncService.addToQueue({ url, method: 'PUT', payload });
+            return of({ sale, savedOnline: false });
+          })
+        );
+      })
     );
   }
 
@@ -81,7 +300,7 @@ export class SalesService {
         const url = `${this.apiUrl}/${identifier}`;
         const payload = { status: updatedSale.status, tempId: updatedSale.id, order_id: updatedSale.order_id };
 
-        if (!this.isOnline) {
+        if (!this.apiStatus.isOnlineNow()) {
           this.syncService.addToQueue({ url, method: 'PATCH', payload });
           return of(updatedSale);
         }
@@ -98,34 +317,7 @@ export class SalesService {
   }
 
   updateSale(sale: Sale): Observable<Sale> {
-    return from(this.dbService.update<Sale>('sales', sale)).pipe(
-      tap(() => {
-        const currentSales = this.sales$.getValue();
-        const index = currentSales.findIndex(s => s.id === sale.id);
-        if (index !== -1) {
-          currentSales[index] = sale;
-          this.sales$.next([...currentSales]);
-        }
-      }),
-      switchMap(() => {
-        const identifier = sale.order_id ?? sale.id;
-        const url = `${this.apiUrl}/${identifier}`;
-        const payload = { ...sale, tempId: sale.id, order_id: sale.order_id };
-
-        if (!this.isOnline) {
-          this.syncService.addToQueue({ url, method: 'PUT', payload });
-          return of(sale);
-        }
-
-        return this.http.put(url, payload).pipe(
-          map(() => sale),
-          catchError(() => {
-            this.syncService.addToQueue({ url, method: 'PUT', payload });
-            return of(sale);
-          })
-        );
-      })
-    );
+    return this.updateSaleWithStatus(sale).pipe(map(res => res.sale));
   }
 
   deleteSale(sale: Sale): Observable<void> {
@@ -140,7 +332,7 @@ export class SalesService {
       map(() => undefined)
     );
 
-    if (!this.isOnline) {
+    if (!this.apiStatus.isOnlineNow()) {
       this.syncService.addToQueue({ url, method: 'DELETE', payload: { tempId: sale.id, order_id: sale.order_id } });
       return deleteLocal$;
     }
@@ -155,62 +347,6 @@ export class SalesService {
   }
 
   saveSale(saleData: Omit<Sale, 'id'>): Observable<Sale> {
-    const tempId = -Date.now();
-    const tempSale: Sale = { ...saleData, id: tempId };
-
-    // Stock is updated optimistically in the Sales UI while building the order.
-    // Avoid double-decrementing stock here.
-
-    return from(this.dbService.add<Sale>('sales', tempSale)).pipe(
-      tap(() => {
-        const currentSales = this.sales$.getValue();
-        this.sales$.next([...currentSales, tempSale]);
-      }),
-      switchMap(() => {
-        // If online, try to save immediately and write back the order_id.
-        // If offline (or API errors), queue for later sync.
-        if (!this.isOnline) {
-          this.syncService.addToQueue({
-            url: this.apiUrl,
-            method: 'POST',
-            payload: { ...saleData, tempId }
-          });
-          return of(tempSale);
-        }
-
-        return this.http.post<any>(this.apiUrl, { ...saleData, tempId }).pipe(
-          switchMap((response) => {
-            const rawOrderId = response?.order_id ?? response?.orderId ?? response?.id;
-            const orderId = typeof rawOrderId === 'string' ? Number(rawOrderId) : rawOrderId;
-
-            if (!Number.isFinite(orderId)) {
-              return of(tempSale);
-            }
-
-            const updatedSale: Sale = { ...tempSale, order_id: orderId };
-            return from(this.dbService.update<Sale>('sales', updatedSale)).pipe(
-              tap(() => {
-                const currentSales = this.sales$.getValue();
-                const index = currentSales.findIndex(s => s.id === tempId);
-                if (index !== -1) {
-                  currentSales[index] = updatedSale;
-                  this.sales$.next([...currentSales]);
-                }
-              }),
-              map(() => updatedSale)
-            );
-          }),
-          catchError(() => {
-            this.syncService.addToQueue({
-              url: this.apiUrl,
-              method: 'POST',
-              payload: { ...saleData, tempId }
-            });
-            return of(tempSale);
-          })
-        );
-      }),
-      map((sale) => sale)
-    );
+    return this.saveSaleWithStatus(saleData).pipe(map(res => res.sale));
   }
 }

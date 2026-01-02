@@ -10,7 +10,7 @@ export interface Sale {
   group?: string;
   status: SaleStatus;
   discount: number;
-  is_review: boolean;
+  is_review: boolean;   
   order_items: SalesItem[];
   total_amount: number;
   order_date: Date;

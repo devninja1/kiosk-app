@@ -4,6 +4,7 @@ import { BehaviorSubject, catchError, EMPTY, from, map, Observable, of, switchMa
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Supplier } from '../../model/supplier.model';
 import { SyncService } from './sync.service';
+import { ApiStatusService } from './api-status.service';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -11,7 +12,6 @@ import { environment } from '../../../environments/environment';
 })
 export class SupplierService {
   private apiUrl = `${environment.apiUrl}/suppliers`;
-  private isOnline = navigator.onLine;
   private suppliers$ = new BehaviorSubject<Supplier[]>([]);
   private defaultSuppliers: Supplier[] = [
     { id: 1, name: 'Global Tech Supplies', contactPerson: 'John Smith', phone: '555-1234' },
@@ -23,10 +23,9 @@ export class SupplierService {
   constructor(
     private http: HttpClient,
     private dbService: NgxIndexedDBService,
-    private syncService: SyncService
+    private syncService: SyncService,
+    private apiStatus: ApiStatusService
   ) {
-    window.addEventListener('online', () => this.isOnline = true);
-    window.addEventListener('offline', () => this.isOnline = false);
     this.loadInitialData();
   }
 
@@ -46,7 +45,7 @@ export class SupplierService {
         }
       }),
       tap(() => {
-        if (this.isOnline) {
+        if (this.apiStatus.isOnlineNow()) {
           this.syncWithApi().subscribe();
         }
       }),

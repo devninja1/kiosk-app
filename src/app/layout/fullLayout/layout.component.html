@@ -9,6 +9,19 @@
     <span>BLB Kiosk App</span>
   </button>
   <span class="spacer"></span>
+
+  @if (apiOnline$ | async) {
+    <span class="api-status-badge api-status-badge--online" aria-label="API status online">
+      <mat-icon class="api-status-icon">cloud_done</mat-icon>
+      <span>Online</span>
+    </span>
+  } @else {
+    <span class="api-status-badge api-status-badge--offline" aria-label="API status offline">
+      <mat-icon class="api-status-icon">cloud_off</mat-icon>
+      <span>Offline</span>
+    </span>
+  }
+
   @if (showSyncButton$ | async) {
     <button mat-icon-button
             (click)="onSyncNow()"

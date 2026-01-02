@@ -14,6 +14,7 @@ import { Observable, map, shareReplay, take } from 'rxjs';
 import { MenuComponent } from '../menu/menu.component';
 import { LoadingService } from '../../core/services/loading.service';
 import { SyncService } from '../../core/services/sync.service';
+import { ApiStatusService } from '../../core/services/api-status.service';
 
 @Component({
   selector: 'app-layout',
@@ -47,11 +48,15 @@ export class LayoutComponent {
       shareReplay()
     );
 
+  apiOnline$: Observable<boolean>;
+
   constructor(
     public loadingService: LoadingService,
     public syncService: SyncService,
+    public apiStatus: ApiStatusService,
     private router: Router
   ) {
+    this.apiOnline$ = this.apiStatus.isOnline$();
     this.pendingRequestCount$ = this.syncService.getPendingRequestCount();
     this.showSyncButton$ = this.pendingRequestCount$.pipe(
       map(count => count > 0)

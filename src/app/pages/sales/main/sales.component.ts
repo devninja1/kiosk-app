@@ -308,11 +308,12 @@ export class SalesComponent implements OnInit {
         order_id: this.editingSale.order_id,
       };
 
-      this.salesService.updateSale(updatedSale).subscribe((savedSale) => {
+      this.salesService.updateSaleWithStatus(updatedSale).subscribe(({ sale: savedSale, savedOnline }) => {
         this.lastSavedSale = savedSale;
-        this.snackBar.open('Sale updated successfully!', 'Close', {
+        this.snackBar.open(savedOnline ? 'Saved online' : '✓ Saved offline', 'Close', {
           duration: 3000,
           verticalPosition: 'top',
+          panelClass: [savedOnline ? 'success-snackbar' : 'offline-snackbar']
         });
 
         this.editingSale = null;
@@ -335,11 +336,12 @@ export class SalesComponent implements OnInit {
       return;
     }
 
-    this.salesService.saveSale(salePayload).subscribe((savedSale) => {
+    this.salesService.saveSaleWithStatus(salePayload).subscribe(({ sale: savedSale, savedOnline }) => {
       this.lastSavedSale = savedSale;
-      this.snackBar.open('Sale saved successfully!', 'Close', {
+      this.snackBar.open(savedOnline ? 'Saved online' : '✓ Saved offline', 'Close', {
         duration: 3000,
         verticalPosition: 'top',
+        panelClass: [savedOnline ? 'success-snackbar' : 'offline-snackbar']
       });
 
       // Reset the page for the next sale

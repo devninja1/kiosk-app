@@ -141,9 +141,14 @@
       <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
     </table>
 
-    <mat-paginator [pageSizeOptions]="[10, 25, 100]"
-                   showFirstLastButtons
-                   aria-label="Select page of sales history">
+    <mat-paginator
+      [length]="totalCount"
+      [pageIndex]="pageIndex"
+      [pageSize]="pageSize"
+      [pageSizeOptions]="[10, 25, 100]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons
+      aria-label="Select page of sales history">
     </mat-paginator>
   </div>
 </div>
