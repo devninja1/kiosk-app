@@ -1,0 +1,33 @@
+<h2 mat-dialog-title>{{ data.title || 'Import Data' }}</h2>
+<div mat-dialog-content class="dialog-body">
+  <p>{{ data.helperText || 'Select an Excel file (.xls, .xlsx) up to 5 MB.' }}</p>
+
+  <div class="type-pill">{{ requestTypeLabels[requestType] }}</div>
+
+  <label class="file-drop" for="upload-input">
+    <mat-icon>file_upload</mat-icon>
+    <span>Choose file</span>
+    @if (selectedFile) {
+      <small>{{ selectedFile.name }}</small>
+    }
+    <input
+      id="upload-input"
+      type="file"
+      (change)="onFileSelected($event)"
+      accept=".xls,.xlsx"
+      hidden>
+  </label>
+
+  @if (errorMessage) {
+    <div class="error">{{ errorMessage }}</div>
+  }
+
+  @if (!isOnline) {
+    <div class="offline">Offline detected. Upload is disabled until you reconnect.</div>
+  }
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button (click)="close()" [disabled]="isUploading">Cancel</button>
+  <button mat-flat-button color="primary" (click)="upload()" [disabled]="isUploading || !isOnline">Upload</button>
+</div>

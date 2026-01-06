@@ -7,6 +7,7 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -16,6 +17,8 @@ import { ProductFormComponent } from '../form/product-form.component';
 import { ProductService } from '../../../core/services/product.service';
 import { ConfirmationDialogComponent } from '../../../shared/components/confirmation-dialog/confirmation-dialog.component';
 import { MatPaginator } from '@angular/material/paginator';
+import { UploadRequestType } from 'app/core/services/upload.service';
+import { UploadDialogComponent } from 'app/shared/components/upload-dialog/upload-dialog.component';
 
 @Component({
   selector: 'app-product',
@@ -45,10 +48,16 @@ export class ProductComponent implements OnInit, AfterViewInit {
   uniqueCategories: string[] = [];
   private filterValues = { global: '', category: '' };
 
+  UploadRequestType = UploadRequestType;
+
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  constructor(public dialog: MatDialog, private productService: ProductService) {
+  constructor(
+    public dialog: MatDialog,
+    private productService: ProductService,
+    private snackBar: MatSnackBar
+  ) {
     this.dataSource = new MatTableDataSource<Product>([]);
   }
 
@@ -133,6 +142,23 @@ export class ProductComponent implements OnInit, AfterViewInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.productService.deleteProduct(id).subscribe();
+      }
+    });
+  }
+
+  openUploadDialog(): void {
+    const dialogRef = this.dialog.open(UploadDialogComponent, {
+      width: '420px',
+      data: {
+        requestType: UploadRequestType.ProductExcel,
+        title: 'Import Data',
+        helperText: 'Select an Excel file (.xls, .xlsx) up to 5 MB.'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.uploaded) {
+        this.snackBar.open('Product Excel uploaded.', 'Close', { duration: 2500, verticalPosition: 'top' });
       }
     });
   }

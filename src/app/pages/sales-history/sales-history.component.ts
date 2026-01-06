@@ -6,6 +6,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -17,6 +18,8 @@ import { ReceiptService } from '../../core/services/receipt.service';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatInputModule } from '@angular/material/input';
 import { animate, state, style, transition, trigger } from '@angular/animations';
+import { UploadDialogComponent } from '../../shared/components/upload-dialog/upload-dialog.component';
+import { UploadRequestType } from '../../core/services/upload.service';
 
 @Component({
   selector: 'app-sales-history',
@@ -33,6 +36,7 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
     MatDatepickerModule,
     MatNativeDateModule,
     MatPaginatorModule,
+    MatDialogModule,
   ],
   templateUrl: './sales-history.component.html',
   styleUrl: './sales-history.component.scss',
@@ -66,7 +70,8 @@ export class SalesHistoryComponent implements OnInit {
     private salesService: SalesService,
     private receiptService: ReceiptService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private dialog: MatDialog
   ) {
     this.dataSource = new MatTableDataSource<Sale>([]);
   }
@@ -177,7 +182,27 @@ export class SalesHistoryComponent implements OnInit {
     this.router.navigate(['/sales'], { queryParams: { editOrderId: identifier } });
   }
 
+  openUploadDialog(): void {
+    const dialogRef = this.dialog.open(UploadDialogComponent, {
+      width: '420px',
+      data: {
+        requestType: UploadRequestType.SalesExcel,
+        title: 'Import Sales',
+        helperText: 'Upload a sales Excel file (.xls, .xlsx) up to 5 MB.'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(res => {
+      if (res?.uploaded) {
+        this.loadPage(this.pageIndex, this.pageSize);
+      }
+    });
+  }
+
   deleteOrder(sale: Sale): void {
+    const proceed = window.confirm('Are you sure you want to delete this sale?');
+    if (!proceed) return;
+
     this.salesService.deleteSale(sale).subscribe(() => {
       this.loadPage(this.pageIndex, this.pageSize);
     });

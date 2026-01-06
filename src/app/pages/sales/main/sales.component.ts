@@ -112,7 +112,7 @@ export class SalesComponent implements OnInit {
       if (this.activeEditIdentifier === identifier) return;
       this.activeEditIdentifier = identifier;
 
-      this.salesService.findSaleByIdentifier(identifier).subscribe(sale => {
+      this.salesService.fetchSaleDetail(identifier).subscribe(sale => {
         if (!sale) {
           this.snackBar.open('Sale not found for editing.', 'Close', { duration: 3000, verticalPosition: 'top' });
           return;
@@ -266,11 +266,17 @@ export class SalesComponent implements OnInit {
     this.lastSavedSale = null;
   }
 
+
   editLastSavedSale(): void {
     if (!this.lastSavedSale) return;
 
     const identifier = this.lastSavedSale.order_id ?? this.lastSavedSale.id;
-    this.router.navigate(['/sales'], { queryParams: { editOrderId: identifier } });
+    // Use relative navigation with merge so the same page picks up the query param change.
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { editOrderId: identifier, editSaleId: null },
+      queryParamsHandling: 'merge',
+    });
   }
 
   saveSale(): void {
@@ -300,7 +306,7 @@ export class SalesComponent implements OnInit {
 
     if (this.isEditing && this.editingSale) {
       this.applyStockDeltaForEdit(this.editingOriginalItems, this.salesList);
-
+      console.log(salePayload);
       const updatedSale: Sale = {
         ...this.editingSale,
         ...salePayload,
@@ -310,7 +316,7 @@ export class SalesComponent implements OnInit {
 
       this.salesService.updateSaleWithStatus(updatedSale).subscribe(({ sale: savedSale, savedOnline }) => {
         this.lastSavedSale = savedSale;
-        this.snackBar.open(savedOnline ? 'Saved online' : '✓ Saved offline', 'Close', {
+        this.snackBar.open(savedOnline ? '✓ Saved online' : '✓ Saved offline', 'Close', {
           duration: 3000,
           verticalPosition: 'top',
           panelClass: [savedOnline ? 'success-snackbar' : 'offline-snackbar']
@@ -318,13 +324,9 @@ export class SalesComponent implements OnInit {
 
         this.editingSale = null;
         this.editingOriginalItems = [];
+        this.activeEditIdentifier = null;
 
-        this.router.navigate([], {
-          relativeTo: this.route,
-          queryParams: { editSaleId: null },
-          queryParamsHandling: 'merge',
-          replaceUrl: true,
-        });
+        this.clearEditQueryParams();
 
         // Reset the page for the next sale
         this.salesList = [];
@@ -349,6 +351,15 @@ export class SalesComponent implements OnInit {
       this.addedProductNames.clear();
       this.selectedCustomer = null;
       this.customerSearch.setValue('');
+    });
+  }
+
+  private clearEditQueryParams(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { editOrderId: null, editSaleId: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 

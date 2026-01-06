@@ -1,0 +1,50 @@
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.file-drop {
+  border: 1px dashed #9e9e9e;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  color: #424242;
+}
+
+.file-drop mat-icon {
+  font-size: 32px;
+  height: 32px;
+  width: 32px;
+}
+
+.error {
+  color: #c62828;
+  font-size: 13px;
+}
+
+.type-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e8f0fe;
+  color: #1a73e8;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.offline {
+  color: #c62828;
+  font-size: 13px;
+  font-weight: 600;
+}

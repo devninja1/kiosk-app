@@ -9,6 +9,7 @@ import { SyncService } from './sync.service';
 import { ProductService } from './product.service';
 import { ApiStatusService } from './api-status.service';
 import { environment } from '../../../environments/environment';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Injectable({
   providedIn: 'root'
@@ -24,7 +25,8 @@ export class SalesService {
     private dbService: NgxIndexedDBService,
     private syncService: SyncService,
     private productService: ProductService, // Inject ProductService
-    private apiStatus: ApiStatusService
+    private apiStatus: ApiStatusService,
+    private snackBar: MatSnackBar
   ) {
     this.apiStatus.isOnline$().subscribe(isOnline => {
       if (isOnline) {
@@ -185,6 +187,35 @@ export class SalesService {
     );
   }
 
+  fetchSaleDetail(id: number): Observable<Sale | undefined> {
+    // When editing right after save, we may only have order_id stored (id is temporary).
+    const localFallback$ = this.findLocalByIdentifier(id);
+
+    if (this.apiStatus.isOnlineNow()) {
+      const url = `${this.apiUrl}/${id}`;
+      return this.http.get<any>(url).pipe(
+        map((api) => this.mapApiSale(api)),
+        tap((sale) => {
+          if (sale) {
+            // Cache the detailed sale locally for offline use.
+            this.dbService.update<Sale>('sales', sale).pipe(
+              catchError(() => this.dbService.add<Sale>('sales', sale))
+            ).subscribe();
+          }
+        }),
+        catchError(() => localFallback$)
+      );
+    }
+
+    return localFallback$;
+  }
+
+  private findLocalByIdentifier(identifier: number): Observable<Sale | undefined> {
+    return from(this.dbService.getAll<Sale>('sales')).pipe(
+      map((sales) => sales.find((s) => (s.order_id ?? s.id) === identifier))
+    );
+  }
+
   findSaleByIdentifier(identifier: number): Observable<Sale | undefined> {
     return from(this.dbService.getAll<Sale>('sales')).pipe(
       map((sales) => sales.find(s => (s.order_id ?? s.id) === identifier))
@@ -298,17 +329,22 @@ export class SalesService {
       switchMap(() => {
         const identifier = updatedSale.order_id ?? updatedSale.id;
         const url = `${this.apiUrl}/${identifier}`;
-        const payload = { status: updatedSale.status, tempId: updatedSale.id, order_id: updatedSale.order_id };
+        const payload = [
+          { op: 'replace', path: '/status', value: updatedSale.status }
+        ];
 
         if (!this.apiStatus.isOnlineNow()) {
           this.syncService.addToQueue({ url, method: 'PATCH', payload });
+          this.snackBar.open('Status update queued (offline).', 'Close', { duration: 2500 });
           return of(updatedSale);
         }
 
-        return this.http.patch(url, payload).pipe(
+        return this.http.patch(url, payload, { headers: { 'Content-Type': 'application/json-patch+json' } }).pipe(
+          tap(() => this.snackBar.open('Status updated.', 'Close', { duration: 2000 })),
           map(() => updatedSale),
           catchError(() => {
             this.syncService.addToQueue({ url, method: 'PATCH', payload });
+            this.snackBar.open('Status update queued after failure.', 'Close', { duration: 2500 });
             return of(updatedSale);
           })
         );
@@ -334,13 +370,16 @@ export class SalesService {
 
     if (!this.apiStatus.isOnlineNow()) {
       this.syncService.addToQueue({ url, method: 'DELETE', payload: { tempId: sale.id, order_id: sale.order_id } });
+      this.snackBar.open('Delete queued (offline).', 'Close', { duration: 2500 });
       return deleteLocal$;
     }
 
     return this.http.delete(url).pipe(
+      tap(() => this.snackBar.open('Sale deleted.', 'Close', { duration: 2000 })),
       switchMap(() => deleteLocal$),
       catchError(() => {
         this.syncService.addToQueue({ url, method: 'DELETE', payload: { tempId: sale.id, order_id: sale.order_id } });
+        this.snackBar.open('Delete queued after failure.', 'Close', { duration: 2500 });
         return deleteLocal$;
       })
     );

@@ -1,10 +1,16 @@
 <div class="customer-page-container">
   <div class="header">
     <h1>Customers</h1>
-    <button mat-flat-button color="primary" (click)="openCustomerForm()">
-      <mat-icon>add</mat-icon>
-      <span>Create Customer</span>
-    </button>
+    <div class="header-actions">
+      <button mat-stroked-button color="primary" (click)="openUploadDialog()">
+        <mat-icon>upload</mat-icon>
+        <span>Import Excel</span>
+      </button>
+      <button mat-flat-button color="primary" (click)="openCustomerForm()">
+        <mat-icon>add</mat-icon>
+        <span>Create Customer</span>
+      </button>
+    </div>
   </div>
 
   <mat-form-field appearance="outline" class="full-width">

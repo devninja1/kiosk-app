@@ -12,6 +12,8 @@ import { Customer } from '../../model/customer.model';
 import { CustomerFormComponent } from './form/customer-form.component';
 import { CustomerService } from '../../core/services/customer.service';
 import { ConfirmationDialogComponent } from '../../shared/components/confirmation-dialog/confirmation-dialog.component';
+import { UploadDialogComponent } from '../../shared/components/upload-dialog/upload-dialog.component';
+import { UploadRequestType } from '../../core/services/upload.service';
 
 @Component({
   selector: 'app-customer',
@@ -95,6 +97,23 @@ export class CustomerComponent implements OnInit, AfterViewInit {
         } else {
           this.customerService.addCustomer(payload as Omit<Customer, 'id'>).subscribe(() => this.loadCustomers());
         }
+      }
+    });
+  }
+
+  openUploadDialog(): void {
+    const dialogRef = this.dialog.open(UploadDialogComponent, {
+      width: '420px',
+      data: {
+        requestType: UploadRequestType.CustomerExcel,
+        title: 'Import Customers',
+        helperText: 'Upload a customer Excel file (.xls, .xlsx) up to 5 MB.'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(res => {
+      if (res?.uploaded) {
+        this.loadCustomers();
       }
     });
   }

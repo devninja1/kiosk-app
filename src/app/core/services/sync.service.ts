@@ -18,6 +18,13 @@ export interface FailedRequest extends QueuedRequest {
   timestamp: Date;
 }
 
+export interface JsonPatchOperation {
+  op: 'add' | 'remove' | 'replace' | 'move' | 'copy' | 'test';
+  path: string;
+  value?: any;
+  from?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -164,7 +171,13 @@ export class SyncService {
   }
 
   private executeRequest(req: QueuedRequest): Observable<unknown> {
-    return this.http.request(req.method, req.url, { body: req.payload }).pipe(
+    const headers = req.method === 'PATCH'
+      ? { 'Content-Type': 'application/json-patch+json' }
+      : { 'Content-Type': 'application/json' };
+
+    const body = req.method === 'PATCH' ? this.toJsonPatchPayload(req.payload) : req.payload;
+
+    return this.http.request(req.method, req.url, { body, headers }).pipe(
       tap((response: any) => {
         if (req.method === 'POST' && req.payload?.tempId) {
           // This was an offline creation; update local record with server response.
@@ -186,6 +199,32 @@ export class SyncService {
         }
       })
     );
+  }
+
+  private toJsonPatchPayload(payload: any): JsonPatchOperation[] {
+    // If caller already provided a JSON Patch array, keep it.
+    if (Array.isArray(payload)) {
+      return payload as JsonPatchOperation[];
+    }
+
+    // If caller provided an object of fields to update, convert to shallow "replace" operations.
+    if (payload && typeof payload === 'object') {
+      return Object.entries(payload)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => ({
+          op: 'replace',
+          path: `/${this.escapeJsonPointerSegment(key)}`,
+          value
+        }));
+    }
+
+    // Fallback: empty patch.
+    return [];
+  }
+
+  private escapeJsonPointerSegment(segment: string): string {
+    // RFC 6901: '~' => '~0', '/' => '~1'
+    return segment.replace(/~/g, '~0').replace(/\//g, '~1');
   }
 
   private handleSyncError(req: QueuedRequest, err: any): Observable<void> {
