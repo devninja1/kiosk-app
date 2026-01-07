@@ -41,7 +41,7 @@ import { UploadDialogComponent } from 'app/shared/components/upload-dialog/uploa
   styleUrl: './product.component.scss'
 })
 export class ProductComponent implements OnInit, AfterViewInit {
-  displayedColumns: string[] = ['product_code', 'name', 'group', 'category', 'description', 'cost_price', 'unit_price', 'profit_margin', 'display_order', 'stock', 'is_Stock_enable', 'is_active', 'actions'];
+  displayedColumns: string[] = ['id', 'product_code', 'name', 'group', 'category', 'description', 'cost_price', 'unit_price', 'profit_margin', 'display_order', 'stock', 'is_Stock_enable', 'is_active', 'actions'];
   dataSource: MatTableDataSource<Product>;
 
   categoryFilter = new FormControl('');

@@ -118,7 +118,7 @@ export class CustomerComponent implements OnInit, AfterViewInit {
     });
   }
 
-  deleteCustomer(id: number): void {
+  deleteCustomer(customer: Customer): void {
     const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
       width: '350px',
       data: { message: 'Are you sure you want to delete this customer?' }
@@ -126,7 +126,7 @@ export class CustomerComponent implements OnInit, AfterViewInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.customerService.deleteCustomer(id).subscribe(() => this.loadCustomers());
+        this.customerService.deleteCustomer(customer).subscribe(() => this.loadCustomers());
       }
     });
   }

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { from, Observable, of, switchMap, tap, map, BehaviorSubject, concatMap } from 'rxjs';
+import { from, Observable, of, switchMap, tap, map, BehaviorSubject, concatMap, throwError } from 'rxjs';
 import { NgxIndexedDBService, WithID } from 'ngx-indexed-db';
 import { Product } from '../../model/product.model';
 import { SyncService } from './sync.service';
@@ -13,7 +13,8 @@ import { environment } from '../../../environments/environment';
 export class ProductService {
   private apiUrl = `${environment.apiUrl}/product`;
   private products$ = new BehaviorSubject<Product[]>([]);
-  private readonly productCodePrefix = 'PR';
+  private readonly productCodeMaxLength = 6;
+  private readonly defaultProductCodePrefix = 'PRD';
   private defaultProducts: Product[] = [
     // { id: 1, product_code: 1001, name: 'Slice', category: 'Bread', description: 'A slice of bread', unit_price: 27, cost_price: 26, stock: 10, is_Stock_enable: true, is_active: true },
     // { id: 2, product_code: 1002, name: 'HB', category: 'Bread', description: ' hybride quater', unit_price: 86, cost_price: 80, stock: 50, is_Stock_enable: true, is_active: true },
@@ -67,31 +68,57 @@ export class ProductService {
     return this.products$.asObservable();
   }
 
-  private getNextProductCode(products: Product[]): string {
-    // Only consider existing codes already in PR### format.
+  getProductCodePrefix(name: string | undefined | null): string {
+    const sanitized = (name ?? '')
+      .toString()
+      .replace(/[^A-Za-z0-9]/g, '')
+      .toUpperCase()
+      .trim();
+    const prefix = sanitized.slice(0, 3);
+    return prefix || this.defaultProductCodePrefix;
+  }
+
+  getNextProductCode(products: Product[], name?: string | null): string {
+    const prefix = this.getProductCodePrefix(name);
+    const numericWidth = Math.max(1, this.productCodeMaxLength - prefix.length);
+
     const maxNumeric = products.reduce((max, product) => {
       const code = (product as unknown as { product_code?: unknown }).product_code;
       if (typeof code !== 'string') return max;
-      const match = code.match(new RegExp(`^${this.productCodePrefix}(\\d+)$`, 'i'));
+      const match = code.match(new RegExp(`^${prefix}(\\d{1,${numericWidth}})$`, 'i'));
       if (!match) return max;
       const numeric = Number.parseInt(match[1], 10);
       return Number.isFinite(numeric) ? Math.max(max, numeric) : max;
     }, 0);
 
     const next = maxNumeric + 1;
-    return `${this.productCodePrefix}${String(next).padStart(2, '0')}`;
+    const numericPart = String(next).padStart(numericWidth, '0').slice(-numericWidth);
+    return `${prefix}${numericPart}`;
   }
 
-  addProduct(productData: Omit<Product, 'id' | 'product_code'>): Observable<Product> {
+  addProduct(productData: Omit<Product, 'id' | 'product_code'> & { product_code?: string }): Observable<Product> {
     return from(this.dbService.getAll<Product>('products')).pipe(
       switchMap((products) => {
-        const nextProductCode = this.getNextProductCode(products);
+        const requestedCode = (productData.product_code ?? '').toString().trim();
+        if (requestedCode && !/^[A-Za-z0-9]{1,6}$/.test(requestedCode)) {
+          return throwError(() => new Error('Invalid product code format'));
+        }
+
+        const nextProductCode = requestedCode || this.getNextProductCode(products, productData.name);
+        const isDuplicate = products.some(
+          (p) => (p.product_code ?? '').toString().trim().toLowerCase() === nextProductCode.toLowerCase()
+        );
+
+        if (isDuplicate) {
+          return throwError(() => new Error('Product code already exists'));
+        }
+
         const tempId = -Date.now();
         const tempProduct: Product = {
           ...productData,
-          id: tempId,
           product_code: nextProductCode,
-          name: productData.name,
+          id: tempId,
+          name: productData.name.trim(),
           category: productData.category,
           description: productData.description,
           unit_price: productData.unit_price,

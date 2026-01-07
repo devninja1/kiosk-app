@@ -85,9 +85,30 @@ export class CustomerService {
     return this.customers$.asObservable();
   }
 
-  addCustomer(customerData: Omit<Customer, 'id'>): Observable<Customer> {
+  addCustomer(customerData: Omit<Customer, 'id' | 'customerId'> & Partial<Pick<Customer, 'customerId'>>): Observable<Customer> {
+    const isOnline = this.apiStatus.isOnlineNow();
+
+    if (isOnline) {
+      return this.http.post<Customer>(this.apiUrl, customerData).pipe(
+        switchMap((apiCustomer) => {
+          const customer: Customer = {
+            ...customerData,
+            ...apiCustomer,
+            id: apiCustomer?.id ?? apiCustomer?.customerId ?? -Date.now(),
+            customerId: apiCustomer?.customerId ?? apiCustomer?.id ?? apiCustomer?.customerId ?? -Date.now(),
+          } as Customer;
+
+          return this.upsertLocalCustomer(customer);
+        }),
+        catchError(err => {
+          console.error('Failed to add customer via API', err);
+          return throwError(() => new Error('Failed to add customer online.'));
+        })
+      );
+    }
+
     const tempId = -Date.now();
-    const tempCustomer: Customer = { ...customerData, id: tempId };
+    const tempCustomer: Customer = { ...customerData, id: tempId, customerId: customerData.customerId ?? tempId } as Customer;
 
     return from(this.dbService.add<Customer>('customers', tempCustomer)).pipe(
       tap(() => {
@@ -104,19 +125,89 @@ export class CustomerService {
   }
 
   updateCustomer(updatedCustomer: Customer): Observable<Customer> {
-    const idForApi = updatedCustomer.customerId ?? updatedCustomer.id;
+    const idForApi = updatedCustomer.id;
+    const isOnline = this.apiStatus.isOnlineNow();
+
+    if (isOnline) {
+      return this.http.put<Customer>(`${this.apiUrl}/${idForApi}`, updatedCustomer).pipe(
+        switchMap((apiCustomer) => {
+          const customer: Customer = {
+            ...updatedCustomer,
+            ...apiCustomer,
+            id: apiCustomer?.id ?? updatedCustomer.id,
+            customerId: apiCustomer?.customerId ?? apiCustomer?.id ?? updatedCustomer.customerId ?? updatedCustomer.id,
+          } as Customer;
+
+          return this.upsertLocalCustomer(customer);
+        }),
+        catchError(err => {
+          console.error('Failed to update customer via API', err);
+          return throwError(() => new Error('Failed to update customer online.'));
+        })
+      );
+    }
+
     this.syncService.addToQueue({ url: `${this.apiUrl}/${idForApi}`, method: 'PUT', payload: updatedCustomer });
     return from(this.dbService.update<Customer>('customers', updatedCustomer)).pipe(
-      tap(() => this.loadInitialData()), // Refresh list
+      tap(() => {
+        const currentCustomers = this.customers$.getValue();
+        const idx = currentCustomers.findIndex(c => c.id === updatedCustomer.id);
+        if (idx >= 0) {
+          currentCustomers[idx] = updatedCustomer;
+          this.customers$.next([...currentCustomers]);
+        }
+      }),
       switchMap(() => of(updatedCustomer))
     );
   }
 
-  deleteCustomer(id: number): Observable<void> {
-    const current = this.customers$.getValue();
-    const found = current.find(c => c.id === id || c.customerId === id);
-    const apiId = found?.customerId ?? id;
-    this.syncService.addToQueue({ url: `${this.apiUrl}/${apiId}`, method: 'DELETE', payload: null });
-    return from(this.dbService.delete('customers', id)).pipe(switchMap(() => of(undefined)));
+  deleteCustomer(customer: Customer): Observable<void> {
+    const apiId = customer.id;
+    const localId = customer.id ?? apiId;
+
+    const deleteLocal$ = from(this.dbService.delete('customers', localId)).pipe(
+      tap(() => {
+        const updated = this.customers$.getValue().filter(c => c.id !== localId && c.customerId !== apiId);
+        this.customers$.next(updated);
+      }),
+      map(() => undefined)
+    );
+
+    if (!apiId) {
+      // No API id available; remove only from IndexedDB and memory.
+      return deleteLocal$;
+    }
+
+    return this.http.delete<void>(`${this.apiUrl}/${apiId}`).pipe(
+      switchMap(() => deleteLocal$),
+      catchError(err => {
+        console.error('Failed to delete customer via API', err);
+        return throwError(() => new Error('Failed to delete customer online.'));
+      })
+    );
+  }
+
+  private upsertLocalCustomer(customer: Customer): Observable<Customer> {
+    return from(this.dbService.getByID<Customer>('customers', customer.id)).pipe(
+      switchMap((existing) => {
+        const op$ = existing
+          ? this.dbService.update<Customer>('customers', customer)
+          : this.dbService.add<Customer>('customers', customer);
+
+        return from(op$).pipe(
+          tap(() => {
+            const current = this.customers$.getValue();
+            const idx = current.findIndex(c => c.id === customer.id || c.customerId === customer.customerId);
+            if (idx >= 0) {
+              current[idx] = customer;
+              this.customers$.next([...current]);
+            } else {
+              this.customers$.next([...current, customer]);
+            }
+          }),
+          map(() => customer)
+        );
+      })
+    );
   }
 }

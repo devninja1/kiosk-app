@@ -2,7 +2,16 @@
 <div mat-dialog-content class="dialog-body">
   <p>{{ data.helperText || 'Select an Excel file (.xls, .xlsx) up to 5 MB.' }}</p>
 
-  <div class="type-pill">{{ requestTypeLabels[requestType] }}</div>
+  <div class="type-row">
+    <div class="type-pill">{{ requestTypeLabels[requestType] }}</div>
+    <button mat-stroked-button color="primary" (click)="download()" [disabled]="isDownloading || isUploading || !isOnline">
+      <mat-icon class="excel-icon">table_view</mat-icon>
+      <span>Export Excel</span>
+    </button>
+    @if (!isOnline) {
+      <small class="offline-hint">Reconnect to export.</small>
+    }
+  </div>
 
   <label class="file-drop" for="upload-input">
     <mat-icon>file_upload</mat-icon>

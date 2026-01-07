@@ -27,6 +27,7 @@ export interface UploadDialogData {
 export class UploadDialogComponent implements OnDestroy {
   selectedFile: File | null = null;
   isUploading = false;
+  isDownloading = false;
   errorMessage = '';
   requestType: UploadRequestType;
   isOnline = true;
@@ -106,6 +107,47 @@ export class UploadDialogComponent implements OnDestroy {
           this.snackBar.open(friendly, 'Close', { duration: 4000, verticalPosition: 'top', panelClass: ['warn-snackbar'] });
         }
       });
+  }
+
+  download(): void {
+    if (!this.isOnline) {
+      this.errorMessage = 'You are offline. Connect to the internet to download.';
+      return;
+    }
+
+    this.isDownloading = true;
+    this.errorMessage = '';
+
+    this.uploadService
+      .exportExcel(this.requestType)
+      .pipe(finalize(() => (this.isDownloading = false)))
+      .subscribe({
+        next: (blob) => {
+          const fileName = this.getExportFileName();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          this.snackBar.open('Export ready.', 'Close', { duration: 2500, verticalPosition: 'top' });
+        },
+        error: (err) => {
+          const apiMessage = (err?.error?.message as string) || (err?.message as string);
+          const sanitized = apiMessage ? apiMessage.replace(/https?:\/\/\S+/gi, '[link removed]') : '';
+          const friendly = sanitized ? `Export failed: ${sanitized}` : 'Export failed. Please try again.';
+          this.errorMessage = friendly;
+          this.snackBar.open(friendly, 'Close', { duration: 4000, verticalPosition: 'top', panelClass: ['warn-snackbar'] });
+        }
+      });
+  }
+
+  private getExportFileName(): string {
+    const label = this.requestTypeLabels[this.requestType] || 'export';
+    const safeLabel = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'export';
+    return `${safeLabel}.xlsx`;
   }
 
   close(): void {

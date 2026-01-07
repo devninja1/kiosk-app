@@ -12,6 +12,13 @@ export enum UploadRequestType {
 @Injectable({ providedIn: 'root' })
 export class UploadService {
   private readonly apiUrl = `${environment.apiUrl}/upload`;
+  private readonly exportUrl = `${environment.apiUrl}/Export`;
+
+  private readonly exportTypeMap: Record<UploadRequestType, string> = {
+    [UploadRequestType.ProductExcel]: 'productexcel',
+    [UploadRequestType.CustomerExcel]: 'customerexcel',
+    [UploadRequestType.SalesExcel]: 'salesexcel',
+  };
 
   constructor(private http: HttpClient) {}
 
@@ -20,5 +27,13 @@ export class UploadService {
     formData.append('file', file, file.name);
     formData.append('requestType', requestType);
     return this.http.post(this.apiUrl, formData);
+  }
+
+  exportExcel(requestType: UploadRequestType): Observable<Blob> {
+    const excelExportType = this.exportTypeMap[requestType] ?? this.exportTypeMap[UploadRequestType.ProductExcel];
+    return this.http.get(this.exportUrl, {
+      params: { excelExportType },
+      responseType: 'blob',
+    });
   }
 }

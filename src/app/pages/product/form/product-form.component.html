@@ -2,6 +2,23 @@
 <mat-dialog-content>
   <form [formGroup]="productForm" class="product-form">
     <mat-form-field appearance="outline">
+      <mat-label>Product Code</mat-label>
+      <input matInput formControlName="product_code" required maxlength="6" autocomplete="off">
+      @if (productForm.get('product_code')?.hasError('required')) {
+        <mat-error>Product code is required</mat-error>
+      }
+      @if (productForm.get('product_code')?.hasError('maxlength')) {
+        <mat-error>Maximum 6 characters</mat-error>
+      }
+      @if (productForm.get('product_code')?.hasError('pattern')) {
+        <mat-error>Letters and numbers only</mat-error>
+      }
+      @if (productForm.get('product_code')?.hasError('productCodeTaken')) {
+        <mat-error>Product code already exists</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
       <mat-label>Product Name</mat-label>
       <input matInput formControlName="name" required>
       @if (productForm.get('name')?.hasError('required')) {

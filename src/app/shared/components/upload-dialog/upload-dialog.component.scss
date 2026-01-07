@@ -43,6 +43,22 @@
   width: fit-content;
 }
 
+.type-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.excel-icon {
+  color: #1d6f42;
+}
+
+.offline-hint {
+  color: #c62828;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .offline {
   color: #c62828;
   font-size: 13px;
