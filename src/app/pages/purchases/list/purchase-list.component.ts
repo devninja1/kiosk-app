@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
 import { PurchaseItem } from '../../../model/purchase.model';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-purchase-list',
@@ -23,6 +24,7 @@ import { PurchaseItem } from '../../../model/purchase.model';
 export class PurchaseListComponent {
   @Input() purchaseList: PurchaseItem[] = [];
   @Output() itemDeleted = new EventEmitter<number>();
+  readonly currencyCode = environment.currencyCode;
 
   get grandTotal(): number {
     if (!this.purchaseList || this.purchaseList.length === 0) {

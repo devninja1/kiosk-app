@@ -8,6 +8,7 @@ import { CustomerService } from '../../../core/services/customer.service';
 import { ProductService } from '../../../core/services/product.service';
 import { SalesService } from '../../../core/services/sales.service';
 import { Observable, map, startWith } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 interface QuickLink {
   path: string;
@@ -32,6 +33,7 @@ export class QuickLinksWidgetComponent {
   totalCustomers$: Observable<number>;
   totalProducts$: Observable<number>;
   totalSalesToday$: Observable<number>;
+  readonly currencyCode = environment.currencyCode;
   links: QuickLink[] = [
     { path: '/sales', label: 'New Sale', icon: 'point_of_sale' },
     { path: '/products', label: 'Manage Products', icon: 'inventory_2' },

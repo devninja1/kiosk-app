@@ -40,7 +40,7 @@ export class ApiStatusService implements OnDestroy {
       });
 
     // Periodic probe while browser reports online.
-    timer(0, 50000)
+    timer(0, 30000)
       .pipe(
         takeUntil(this.destroy$),
         switchMap(() => (navigator.onLine ? this.checkNow() : of(false)))

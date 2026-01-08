@@ -28,6 +28,7 @@ import { CustomerService } from '../../../core/services/customer.service';
 import { SalesService } from '../../../core/services/sales.service';
 import { ReceiptService } from '../../../core/services/receipt.service';
 import { Sale } from '../../../model/sale.model';
+import { environment } from '../../../../environments/environment';
 
 // Main Component
 @Component({
@@ -57,6 +58,7 @@ export class SalesComponent implements OnInit {
   addedProductNames = new Set<string>();
 
   lastSavedSale: Sale | null = null;
+  readonly currencyCode = environment.currencyCode;
 
   private editingSale: Sale | null = null;
   private editingOriginalItems: SalesItem[] = [];

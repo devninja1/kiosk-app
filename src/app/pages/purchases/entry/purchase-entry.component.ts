@@ -13,6 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
 
 import { Product } from '../../../model/product.model';
 import { PurchaseItem } from '../../../model/purchase.model';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-purchase-entry',
@@ -44,6 +45,7 @@ export class PurchaseEntryComponent implements OnInit {
   selectedProduct: Product | null = null;
   quantity: number = 1;
   editableCostPrice: number = 0;
+  readonly currencyCode = environment.currencyCode;
 
   ngOnInit() {
     this.filteredProducts = this.productSearch.valueChanges.pipe(

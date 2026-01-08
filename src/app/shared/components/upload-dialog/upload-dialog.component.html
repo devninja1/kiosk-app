@@ -4,6 +4,14 @@
 
   <div class="type-row">
     <div class="type-pill">{{ requestTypeLabels[requestType] }}</div>
+    @if (requestType === 'SalesExcel') {
+      <mat-form-field appearance="outline" class="date-field">
+        <mat-label>Select date</mat-label>
+        <input matInput [matDatepicker]="picker" [(ngModel)]="selectedDate">
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+    }
     <button mat-stroked-button color="primary" (click)="download()" [disabled]="isDownloading || isUploading || !isOnline">
       <mat-icon class="excel-icon">table_view</mat-icon>
       <span>Export Excel</span>

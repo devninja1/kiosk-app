@@ -13,6 +13,11 @@
   }
 }
 
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .table-container {
   overflow: auto;
 }

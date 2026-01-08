@@ -63,7 +63,7 @@ export class CustomerService {
     ).subscribe();
   }
 
-  private syncWithApi(): Observable<Customer[]> {
+  syncWithApi(): Observable<Customer[]> {
     return this.http.get<Customer[]>(this.apiUrl).pipe(
       switchMap(apiCustomers => {
         return this.dbService.clear('customers').pipe(
@@ -83,6 +83,13 @@ export class CustomerService {
 
   getCustomers(): Observable<Customer[]> {
     return this.customers$.asObservable();
+  }
+
+  refreshFromApi(): Observable<Customer[]> {
+    if (!this.apiStatus.isOnlineNow()) {
+      return of(this.customers$.getValue());
+    }
+    return this.syncWithApi();
   }
 
   addCustomer(customerData: Omit<Customer, 'id' | 'customerId'> & Partial<Pick<Customer, 'customerId'>>): Observable<Customer> {

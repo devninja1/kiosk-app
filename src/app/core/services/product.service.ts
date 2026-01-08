@@ -51,7 +51,7 @@ export class ProductService {
     });
   }
 
-  private syncWithApi() {
+  syncWithApi() {
     this.http.get<Product[]>(this.apiUrl).subscribe((products: Product[]) => {
       // Only clear the local DB after successfully fetching from the API
       if (products) {
@@ -62,6 +62,21 @@ export class ProductService {
         });
       }
     });
+  }
+
+  refreshFromApi(): Observable<Product[]> {
+    if (!this.apiStatus.isOnlineNow()) {
+      return of(this.products$.getValue());
+    }
+    return this.http.get<Product[]>(this.apiUrl).pipe(
+      switchMap((products) =>
+        this.dbService.clear('products').pipe(
+          switchMap(() => this.dbService.bulkAdd<Product>('products', products)),
+          switchMap(() => this.dbService.getAll<Product>('products'))
+        )
+      ),
+      tap((prods) => this.products$.next(prods))
+    );
   }
 
   getProducts(): Observable<Product[]> {

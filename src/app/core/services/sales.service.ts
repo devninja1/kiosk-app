@@ -48,11 +48,18 @@ export class SalesService {
       .subscribe();
   }
 
-  private syncWithApi(): Observable<Sale[]> {
+  syncWithApi(): Observable<Sale[]> {
     return this.fetchSalesPage(this.defaultPage - 1, this.defaultPageSize).pipe(
       map(res => res.items),
       tap(items => this.sales$.next(items))
     );
+  }
+
+  refreshFromApi(): Observable<Sale[]> {
+    if (!this.apiStatus.isOnlineNow()) {
+      return of(this.sales$.getValue());
+    }
+    return this.syncWithApi();
   }
 
   fetchSalesPage(
@@ -159,15 +166,24 @@ export class SalesService {
       customer_name: api.customer_name,
       group: api.group,
       status: this.coerceSaleStatus(api.status),
-      discount: api.discount ?? 0,
+      discount: this.toNumber((api as any)?.discount, 0),
       is_review: Boolean(api.is_review),
       order_items: (rawItems as SalesItem[]).map((i) => ({
         ...i,
+        unit_price: this.toNumber((i as any).unit_price, 0),
+        quantity: this.toNumber((i as any).quantity, 0),
+        discount: this.toNumber((i as any).discount, 0),
+        subtotal: this.toNumber((i as any).subtotal, 0),
         updated_date: new Date((i as any).updated_date)
       })),
-      total_amount: api.total_amount ?? 0,
+      total_amount: this.toNumber((api as any)?.total_amount, 0),
       order_date: new Date(api.order_date)
     };
+  }
+
+  private toNumber(value: any, fallback = 0): number {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
   }
 
   private coerceSaleStatus(status: string): SaleStatus {

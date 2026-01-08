@@ -14,6 +14,7 @@ import { Purchase } from '../../../model/purchase.model';
 import { Supplier } from '../../../model/supplier.model';
 import { PurchaseService } from '../../../core/services/purchase.service';
 import { SupplierService } from '../../../core/services/supplier.service';
+import { environment } from '../../../../environments/environment';
 
 export interface PurchaseHistoryView extends Purchase {
   supplierName: string;
@@ -47,6 +48,7 @@ export class PurchaseHistoryComponent implements OnInit, AfterViewInit, OnDestro
   displayedColumns: string[] = ['date', 'supplierName', 'grandTotal'];
   dataSource: MatTableDataSource<PurchaseHistoryView>;
   expandedElement: PurchaseHistoryView | null = null;
+  readonly currencyCode = environment.currencyCode;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;

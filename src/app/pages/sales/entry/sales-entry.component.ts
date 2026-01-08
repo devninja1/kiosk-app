@@ -15,6 +15,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { Product } from '../../../model/product.model';
 import { SalesItem } from '../../../model/sales.model';
 import { ProductService } from '../../../core/services/product.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-sales-entry',
@@ -48,6 +49,7 @@ export class SalesEntryComponent implements OnInit {
   editableRate: number = 0;
   canCreateNewProduct = false;
   private lastSearchText = '';
+  readonly currencyCode = environment.currencyCode;
 
   constructor(private productService: ProductService) {}
 

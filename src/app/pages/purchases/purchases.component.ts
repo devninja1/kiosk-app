@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BehaviorSubject, catchError, EMPTY, merge, Observable, Subject, switchMap, takeUntil, tap } from 'rxjs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { extractApiErrorMessage } from 'app/core/utils/error-utils';
 import { MatButtonModule, MatButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -94,7 +95,8 @@ export class PurchasesComponent implements OnInit, OnDestroy {
         this.resetPurchase();
       }),
       catchError(err => {
-        this.snackBar.open('Failed to save purchase.', 'Close', { duration: 3000 });
+        const msg = extractApiErrorMessage(err) || 'Failed to save purchase.';
+        this.snackBar.open(msg, 'Close', { duration: 4000 });
         console.error(err);
         return EMPTY;
       }),
@@ -105,8 +107,9 @@ export class PurchasesComponent implements OnInit, OnDestroy {
   onItemAdded(newItem: PurchaseItem) {
     this.productService.updateStock(newItem.product.id, newItem.quantity).pipe(
       takeUntil(this.destroy$),
-      catchError(() => {
-        this.snackBar.open('Failed to update stock for new item.', 'Close', { duration: 3000 });
+      catchError(err => {
+        const msg = extractApiErrorMessage(err) || 'Failed to update stock for new item.';
+        this.snackBar.open(msg, 'Close', { duration: 3000 });
         return EMPTY;
       })
     ).subscribe(() => {
@@ -125,8 +128,9 @@ export class PurchasesComponent implements OnInit, OnDestroy {
     if (deletedItem) {
       this.productService.updateStock(deletedItem.product.id, -deletedItem.quantity).pipe(
         takeUntil(this.destroy$),
-        catchError(() => {
-          this.snackBar.open('Failed to update stock for deleted item.', 'Close', { duration: 3000 });
+        catchError(err => {
+          const msg = extractApiErrorMessage(err) || 'Failed to update stock for deleted item.';
+          this.snackBar.open(msg, 'Close', { duration: 3000 });
           return EMPTY;
         })
       ).subscribe(() => {

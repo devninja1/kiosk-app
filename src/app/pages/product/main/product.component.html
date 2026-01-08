@@ -2,13 +2,13 @@
   <div class="header">
     <h1>Products</h1>
     <div class="header-actions">
-      <button mat-stroked-button color="primary" (click)="openUploadDialog()">
-        <mat-icon>upload</mat-icon>
-        <span>Import Excel</span>
-      </button>
       <button mat-flat-button color="primary" (click)="openProductForm()">
         <mat-icon>add</mat-icon>
         <span>Create Product</span>
+      </button>
+      <button mat-stroked-button color="primary" (click)="openUploadDialog()">
+        <mat-icon>upload</mat-icon>
+        <span>Import Excel</span>
       </button>
     </div>
   </div>
@@ -72,13 +72,13 @@
       <!-- Cost Price Column -->
       <ng-container matColumnDef="cost_price">
         <th mat-header-cell *matHeaderCellDef> Cost Price </th>
-        <td mat-cell *matCellDef="let product"> {{product.cost_price | currency:'INR':'symbol'}} </td>
+        <td mat-cell *matCellDef="let product"> {{product.cost_price | currency:currencyCode:'symbol'}} </td>
       </ng-container>
 
       <!-- Unit Price Column -->
       <ng-container matColumnDef="unit_price">
         <th mat-header-cell *matHeaderCellDef> Unit Price </th>
-        <td mat-cell *matCellDef="let product"> {{product.unit_price | currency:'INR':'symbol'}} </td>
+        <td mat-cell *matCellDef="let product"> {{product.unit_price | currency:currencyCode:'symbol'}} </td>
       </ng-container>
 
       <!-- Profit Margin Column -->
@@ -134,9 +134,10 @@
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
     </table>
 
-    <mat-paginator [pageSizeOptions]="[5, 10, 20]"
+    <mat-paginator [pageSizeOptions]="pageSizeOptions"
+                   [pageSize]="defaultPageSize"
                    showFirstLastButtons
-                   aria-label="Select page of periodic elements">
+                   aria-label="Select page of products">
     </mat-paginator>
   </div>
 </div>

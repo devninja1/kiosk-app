@@ -1,4 +1,4 @@
-import { SalesItem } from './sales.model';
+import { Decimal, SalesItem } from './sales.model';
 
 export type SaleStatus = 'pending' | 'completed' | 'cancelled';
 
@@ -9,9 +9,9 @@ export interface Sale {
   customer_name: string;
   group?: string;
   status: SaleStatus;
-  discount: number;
+  discount: Decimal;
   is_review: boolean;   
   order_items: SalesItem[];
-  total_amount: number;
+  total_amount: Decimal;
   order_date: Date;
 }

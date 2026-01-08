@@ -12,9 +12,9 @@
       @for (item of purchaseList; track trackByProduct(i, item); let i = $index) {
         <div class="purchase-list-item">
           <span class="col-product">{{ item.product.name }}</span>
-          <span class="col-cost-price">{{ item.product.cost_price | currency:'INR':'symbol' }}</span>
+          <span class="col-cost-price">{{ item.product.cost_price | currency:currencyCode:'symbol' }}</span>
           <span class="col-qty">{{ item.quantity }}</span>
-          <span class="col-total">{{ item.total | currency:'INR':'symbol' }}</span>
+          <span class="col-total">{{ item.total | currency:currencyCode:'symbol' }}</span>
           <span class="col-actions">
             <button mat-icon-button color="warn" (click)="deleteItem(i)" aria-label="Delete item">
               <mat-icon>delete</mat-icon>
@@ -22,7 +22,7 @@
           </span>
         </div>
       }
-      <div class="purchase-list-footer">Grand Total: {{ grandTotal | currency:'INR':'symbol' }}</div>
+      <div class="purchase-list-footer">Grand Total: {{ grandTotal | currency:currencyCode:'symbol' }}</div>
     </mat-card-content>
   </mat-card>
 }

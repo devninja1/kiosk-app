@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { SalesItem } from '../../../model/sales.model';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-sales-list',
@@ -17,6 +18,7 @@ export class SalesListComponent {
   @Input() salesList: SalesItem[] = [];
   @Output() itemDeleted = new EventEmitter<number>();
   @Output() quantityChanged = new EventEmitter<{ index: number; delta: number }>();
+  readonly currencyCode = environment.currencyCode;
 
   get grandTotal(): number {
     if (!this.salesList || this.salesList.length === 0) {

@@ -1,3 +1,5 @@
+export type Decimal = number;
+
 export interface SalesItem {
   /** Product id */
   id: number;
@@ -5,9 +7,9 @@ export interface SalesItem {
   order_id?: number;
   product_code: string;
   product_name: string;
-  unit_price: number;
-  quantity: number;
-  discount: number;
-  subtotal: number;
+  unit_price: Decimal;
+  quantity: Decimal;
+  discount: Decimal;
+  subtotal: Decimal;
   updated_date: Date | string;
 }

@@ -65,7 +65,7 @@
       <!-- Total Amount Column -->
       <ng-container matColumnDef="total_amount">
         <th mat-header-cell *matHeaderCellDef> Total </th>
-        <td mat-cell *matCellDef="let element"> {{element.total_amount | currency:'INR':'symbol'}} </td>
+        <td mat-cell *matCellDef="let element"> {{element.total_amount | currency:currencyCode:'symbol'}} </td>
       </ng-container>
 
       <!-- Status Column -->
@@ -128,7 +128,7 @@
             <ul>
               @for (item of element.order_items; track item.id) {
                 <li>
-                  {{ item.product_name }} ({{ item.quantity }} x {{ item.unit_price | currency:'INR':'symbol' }}) = <strong>{{ item.subtotal | currency:'INR':'symbol' }}</strong>
+                  {{ item.product_name }} ({{ item.quantity }} x {{ item.unit_price | currency:currencyCode:'symbol' }}) = <strong>{{ item.subtotal | currency:currencyCode:'symbol' }}</strong>
                 </li>
               }
             </ul>
@@ -149,7 +149,7 @@
       [length]="totalCount"
       [pageIndex]="pageIndex"
       [pageSize]="pageSize"
-      [pageSizeOptions]="[10, 25, 100]"
+      [pageSizeOptions]="pageSizeOptions"
       (page)="onPageChange($event)"
       showFirstLastButtons
       aria-label="Select page of sales history">

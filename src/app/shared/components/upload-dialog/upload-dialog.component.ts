@@ -1,12 +1,18 @@
 import { Component, Inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { UploadRequestType, UploadService } from 'app/core/services/upload.service';
 import { finalize, Subject, takeUntil } from 'rxjs';
 import { ApiStatusService } from 'app/core/services/api-status.service';
+import { extractApiErrorMessage } from 'app/core/utils/error-utils';
 
 export interface UploadDialogData {
   /** Default request type for the caller (e.g., ProductExcel, CustomerExcel). */
@@ -20,7 +26,7 @@ export interface UploadDialogData {
 @Component({
   selector: 'app-upload-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDatepickerModule, MatNativeDateModule],
   templateUrl: './upload-dialog.component.html',
   styleUrl: './upload-dialog.component.scss'
 })
@@ -30,6 +36,7 @@ export class UploadDialogComponent implements OnDestroy {
   isDownloading = false;
   errorMessage = '';
   requestType: UploadRequestType;
+  selectedDate: Date = new Date();
   isOnline = true;
   private destroy$ = new Subject<void>();
 
@@ -88,6 +95,11 @@ export class UploadDialogComponent implements OnDestroy {
       return;
     }
 
+    if (this.requestType === UploadRequestType.SalesExcel && this.selectedFile && !this.isSalesFileDateValid(this.selectedFile.name)) {
+      this.errorMessage = `Selected file date must be ${this.formatDate(this.selectedDate)}.`;
+      return;
+    }
+
     this.isUploading = true;
     this.errorMessage = '';
 
@@ -100,11 +112,8 @@ export class UploadDialogComponent implements OnDestroy {
           this.dialogRef.close({ uploaded: true, requestType: this.requestType });
         },
         error: (err) => {
-          const apiMessage = (err?.error?.message as string) || (err?.message as string);
-          const sanitized = apiMessage ? apiMessage.replace(/https?:\/\/\S+/gi, '[link removed]') : '';
-          const friendly = sanitized ? `Upload failed: ${sanitized}` : 'Upload failed. Please try again.';
-          this.errorMessage = friendly;
-          this.snackBar.open(friendly, 'Close', { duration: 4000, verticalPosition: 'top', panelClass: ['warn-snackbar'] });
+          const apiMessage = extractApiErrorMessage(err, false);
+          this.errorMessage = apiMessage || 'Upload failed. Please try again.';
         }
       });
   }
@@ -135,19 +144,46 @@ export class UploadDialogComponent implements OnDestroy {
           this.snackBar.open('Export ready.', 'Close', { duration: 2500, verticalPosition: 'top' });
         },
         error: (err) => {
-          const apiMessage = (err?.error?.message as string) || (err?.message as string);
-          const sanitized = apiMessage ? apiMessage.replace(/https?:\/\/\S+/gi, '[link removed]') : '';
-          const friendly = sanitized ? `Export failed: ${sanitized}` : 'Export failed. Please try again.';
-          this.errorMessage = friendly;
-          this.snackBar.open(friendly, 'Close', { duration: 4000, verticalPosition: 'top', panelClass: ['warn-snackbar'] });
+          const apiMessage = extractApiErrorMessage(err, false);
+          this.errorMessage = apiMessage || 'Export failed. Please try again.';
         }
       });
   }
 
   private getExportFileName(): string {
-    const label = this.requestTypeLabels[this.requestType] || 'export';
-    const safeLabel = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'export';
-    return `${safeLabel}.xlsx`;
+    const selected = this.formatDate(this.selectedDate);
+
+    if (this.requestType === UploadRequestType.ProductExcel) {
+      return `product_${selected}_${this.uniqueCode()}.xlsx`;
+    }
+
+    if (this.requestType === UploadRequestType.CustomerExcel) {
+      return `customer_${selected}_${this.uniqueCode()}.xlsx`;
+    }
+
+    if (this.requestType === UploadRequestType.SalesExcel) {
+      return `${selected}_1_DailySales${this.uniqueCode()}.xlsx`;
+    }
+
+    return `export_${selected}_${this.uniqueCode()}.xlsx`;
+  }
+
+  private formatDate(date: Date): string {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  }
+
+  private uniqueCode(): string {
+    return Math.random().toString(36).slice(-6);
+  }
+
+  private isSalesFileDateValid(fileName: string): boolean {
+    const match = /^([0-9]{2}-[0-9]{2}-[0-9]{4})_/.exec(fileName);
+    if (!match) return false;
+    const datePart = match[1];
+    return datePart === this.formatDate(this.selectedDate);
   }
 
   close(): void {

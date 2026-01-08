@@ -18,14 +18,14 @@ export class MenuComponent {
 
   menuItems = [
     { name: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-    { name: 'Sales', icon: 'point_of_sale', route: '/sales' },
+    { name: 'Customers', icon: 'people', route: '/customers' },
     { name: 'Products', icon: 'inventory_2', route: '/products' },
+    { name: 'Sales', icon: 'point_of_sale', route: '/sales' },
+    { name: 'Sales History', icon: 'history', route: '/saleshistory' },
     { name: 'Inventory', icon: 'inventory', route: '/inventory' },
     { name: 'Suppliers', icon: 'local_shipping', route: '/suppliers' },
     { name: 'Purchases', icon: 'shopping_cart', route: '/purchases' },
     { name: 'Purchase History', icon: 'receipt_long', route: '/purchase-history' },
-    { name: 'Sales History', icon: 'history', route: '/saleshistory' },
-    { name: 'Customers', icon: 'people', route: '/customers' },
     { name: 'Sync Status', icon: 'sync_problem', route: '/sync-status' },
     { name: 'Settings', icon: 'settings', route: '/settings' },
   ];

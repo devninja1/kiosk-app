@@ -17,8 +17,8 @@
           }
         </div>
         <div>Items: {{ lastSavedSale.order_items.length }}</div>
-        <div>Discount: {{ lastSavedSale.discount | currency:'INR':'symbol' }}</div>
-        <div>Total: {{ lastSavedSale.total_amount | currency:'INR':'symbol' }}</div>
+        <div>Discount: {{ lastSavedSale.discount | currency:currencyCode:'symbol' }}</div>
+        <div>Total: {{ lastSavedSale.total_amount | currency:currencyCode:'symbol' }}</div>
       </mat-card-content>
       <mat-card-actions align="end">
         <button mat-raised-button color="primary" (click)="printLastSavedSale()">

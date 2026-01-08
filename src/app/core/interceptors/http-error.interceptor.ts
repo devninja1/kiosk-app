@@ -6,6 +6,10 @@ import { inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, throwError } from 'rxjs';
 import { ApiStatusService } from '../services/api-status.service';
+import { extractApiErrorMessage } from '../utils/error-utils';
+
+let snackBarActive = false;
+const messageQueue: string[] = [];
 
 export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const snackBar = inject(MatSnackBar);
@@ -18,22 +22,34 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => error);
       }
 
-      let errorMessage = 'An unknown error occurred!';
-      if (error.error instanceof ErrorEvent) {
-        // A client-side or network error occurred.
-        errorMessage = `An error occurred: ${error.error.message}`;
-      } else {
-        // The backend returned an unsuccessful response code.
-        errorMessage = `Server returned code ${error.status}, error message is: ${error.message}`;
+      let errorMessage = extractApiErrorMessage(error, false) || `Server returned code ${error.status}, error message is: ${error.message}`;
+
+      const forwardedError: any = { ...error, userMessage: errorMessage };
+
+      // Only enqueue a snackbar if downstream does not explicitly handle the error via catchError with userMessage check.
+      messageQueue.push(errorMessage);
+      if (!snackBarActive) {
+        const showNext = () => {
+          const nextMessage = messageQueue.shift();
+          if (!nextMessage) {
+            snackBarActive = false;
+            return;
+          }
+          snackBarActive = true;
+          const ref = snackBar.open(nextMessage, 'Close', {
+            duration: 10000,
+            verticalPosition: 'top',
+            panelClass: ['warn-snackbar']
+          });
+          ref.afterDismissed().subscribe(() => {
+            snackBarActive = false;
+            showNext();
+          });
+        };
+        showNext();
       }
 
-      snackBar.open(errorMessage, 'Close', {
-        duration: 5000,
-        verticalPosition: 'top',
-        panelClass: ['warn-snackbar'] // Optional: for custom styling
-      });
-
-      return throwError(() => error);
+      return throwError(() => forwardedError);
     })
   );
 };

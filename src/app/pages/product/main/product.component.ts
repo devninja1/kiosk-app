@@ -8,6 +8,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { environment } from '../../../../environments/environment';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -43,6 +44,9 @@ import { UploadDialogComponent } from 'app/shared/components/upload-dialog/uploa
 export class ProductComponent implements OnInit, AfterViewInit {
   displayedColumns: string[] = ['id', 'product_code', 'name', 'group', 'category', 'description', 'cost_price', 'unit_price', 'profit_margin', 'display_order', 'stock', 'is_Stock_enable', 'is_active', 'actions'];
   dataSource: MatTableDataSource<Product>;
+  readonly pageSizeOptions = environment.pageSizeOptions;
+  readonly defaultPageSize = environment.defaultPageSize;
+  readonly currencyCode = environment.currencyCode;
 
   categoryFilter = new FormControl('');
   uniqueCategories: string[] = [];
@@ -108,6 +112,7 @@ export class ProductComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     this.dataSource.paginator = this.paginator;
+    this.dataSource.paginator.pageSize = environment.defaultPageSize;
     this.dataSource.sort = this.sort;
   }
 
@@ -158,7 +163,14 @@ export class ProductComponent implements OnInit, AfterViewInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result?.uploaded) {
-        this.snackBar.open('Product Excel uploaded.', 'Close', { duration: 2500, verticalPosition: 'top' });
+        this.productService.refreshFromApi().subscribe({
+          next: () => {
+            this.snackBar.open('Product Excel uploaded. Products refreshed.', 'Close', { duration: 2500, verticalPosition: 'top' });
+          },
+          error: () => {
+            this.snackBar.open('Upload succeeded. Refresh failed while offline.', 'Close', { duration: 2500, verticalPosition: 'top' });
+          }
+        });
       }
     });
   }

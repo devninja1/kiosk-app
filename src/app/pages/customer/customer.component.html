@@ -2,13 +2,13 @@
   <div class="header">
     <h1>Customers</h1>
     <div class="header-actions">
-      <button mat-stroked-button color="primary" (click)="openUploadDialog()">
-        <mat-icon>upload</mat-icon>
-        <span>Import Excel</span>
-      </button>
       <button mat-flat-button color="primary" (click)="openCustomerForm()">
         <mat-icon>add</mat-icon>
         <span>Create Customer</span>
+      </button>
+      <button mat-stroked-button color="primary" (click)="openUploadDialog()">
+        <mat-icon>upload</mat-icon>
+        <span>Import Excel</span>
       </button>
     </div>
   </div>
@@ -89,7 +89,8 @@
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
     </table>
 
-    <mat-paginator [pageSizeOptions]="[5, 10, 20]"
+    <mat-paginator [pageSizeOptions]="pageSizeOptions"
+                   [pageSize]="defaultPageSize"
                    showFirstLastButtons
                    aria-label="Select page of customer elements">
     </mat-paginator>

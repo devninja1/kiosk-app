@@ -20,6 +20,7 @@ import { MatInputModule } from '@angular/material/input';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { UploadDialogComponent } from '../../shared/components/upload-dialog/upload-dialog.component';
 import { UploadRequestType } from '../../core/services/upload.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-sales-history',
@@ -53,13 +54,16 @@ export class SalesHistoryComponent implements OnInit {
   columnsToDisplay = ['expand', 'id', 'customer', 'order_date', 'total_amount', 'status', 'actions'];
   expandedElement: Sale | null = null;
   totalCount = 0;
-  pageSize = 10;
+  pageSize = environment.defaultPageSize;
   pageIndex = 0;
   isLoading = false;
+  readonly currencyCode = environment.currencyCode;
 
   statusOptions: SaleStatus[] = ['pending', 'completed', 'cancelled'];
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
+
+  readonly pageSizeOptions = environment.pageSizeOptions;
 
   range = new FormGroup({
     start: new FormControl<Date | null>(null),
@@ -184,7 +188,7 @@ export class SalesHistoryComponent implements OnInit {
 
   openUploadDialog(): void {
     const dialogRef = this.dialog.open(UploadDialogComponent, {
-      width: '420px',
+      width: '535px',
       data: {
         requestType: UploadRequestType.SalesExcel,
         title: 'Import Sales',

@@ -35,7 +35,7 @@
 
       <div class="detail-item total">
         <span class="label">Total:</span>
-        <span class="value">{{ totalAmount | currency:'INR':'symbol':'1.2-2' }}</span>
+        <span class="value">{{ totalAmount | currency:currencyCode:'symbol':'1.2-2' }}</span>
       </div>
 
       <button mat-flat-button color="primary" (click)="addItem()" class="add-button">

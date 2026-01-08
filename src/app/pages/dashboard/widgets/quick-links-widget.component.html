@@ -10,7 +10,7 @@
         <span class="count-badge">{{ count }}</span>
       }
       @if (link.path === '/sales-history' && (totalSalesToday$ | async); as total) {
-        <span class="count-badge amount-badge">{{ total | currency:'INR':'symbol':'1.0-0' }}</span>
+        <span class="count-badge amount-badge">{{ total | currency:currencyCode:'symbol':'1.0-0' }}</span>
       }
     </a>
   }

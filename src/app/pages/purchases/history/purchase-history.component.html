@@ -24,7 +24,7 @@
       <!-- Grand Total Column -->
       <ng-container matColumnDef="grandTotal">
         <th mat-header-cell *matHeaderCellDef mat-sort-header> Grand Total </th>
-        <td mat-cell *matCellDef="let element"> {{element.grandTotal | currency:'INR'}} </td>
+        <td mat-cell *matCellDef="let element"> {{element.grandTotal | currency:currencyCode:'symbol'}} </td>
       </ng-container>
 
       <!-- Expanded Content Column - The detail row -->
@@ -35,7 +35,7 @@
             <ul>
                 @for (item of element.items; track $index) {
                   <li>
-                    {{ item.product.name }} - {{ item.quantity }} x {{ item.product.cost_price | currency:'INR' }} = {{ item.total | currency:'INR' }}
+                    {{ item.product.name }} - {{ item.quantity }} x {{ item.product.cost_price | currency:currencyCode:'symbol' }} = {{ item.total | currency:currencyCode:'symbol' }}
                   </li>
                 }
             </ul>

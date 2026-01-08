@@ -14,6 +14,7 @@ import { CustomerService } from '../../core/services/customer.service';
 import { ConfirmationDialogComponent } from '../../shared/components/confirmation-dialog/confirmation-dialog.component';
 import { UploadDialogComponent } from '../../shared/components/upload-dialog/upload-dialog.component';
 import { UploadRequestType } from '../../core/services/upload.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-customer',
@@ -35,6 +36,8 @@ import { UploadRequestType } from '../../core/services/upload.service';
 export class CustomerComponent implements OnInit, AfterViewInit {
   displayedColumns: string[] = ['customerId', 'name', 'phone_number', 'place', 'type', 'display_order', 'is_active', 'date_added', 'actions'];
   dataSource: MatTableDataSource<Customer>;
+  readonly pageSizeOptions = environment.pageSizeOptions;
+  readonly defaultPageSize = environment.defaultPageSize;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -51,8 +54,8 @@ export class CustomerComponent implements OnInit, AfterViewInit {
         data.phone_number,
         data.place,
         data.type,
-        data.display_order?.toString(),
-        data.customerId?.toString(),
+        data.display_order.toString(),
+        data.customerId.toString(),
       ]
         .filter(Boolean)
         .join(' ')
@@ -71,6 +74,7 @@ export class CustomerComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     this.dataSource.paginator = this.paginator;
+    this.dataSource.paginator.pageSize = this.defaultPageSize;
     this.dataSource.sort = this.sort;
   }
 
@@ -113,7 +117,10 @@ export class CustomerComponent implements OnInit, AfterViewInit {
 
     dialogRef.afterClosed().subscribe(res => {
       if (res?.uploaded) {
-        this.loadCustomers();
+        this.customerService.refreshFromApi().subscribe({
+          next: () => this.loadCustomers(),
+          error: () => this.loadCustomers()
+        });
       }
     });
   }

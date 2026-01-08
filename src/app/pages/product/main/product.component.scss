@@ -4,3 +4,15 @@
   padding: 16px 0;
   flex-wrap: wrap;
 }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
