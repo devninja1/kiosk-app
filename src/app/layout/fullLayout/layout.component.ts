@@ -15,6 +15,7 @@ import { MenuComponent } from '../menu/menu.component';
 import { LoadingService } from '../../core/services/loading.service';
 import { SyncService } from '../../core/services/sync.service';
 import { ApiStatusService } from '../../core/services/api-status.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-layout',
@@ -41,6 +42,7 @@ export class LayoutComponent {
   showSyncButton$: Observable<boolean>;
   pendingRequestCount$: Observable<number>;
   private breakpointObserver = inject(BreakpointObserver);
+  theme$!: Observable<'light' | 'dark'>;
 
   isHandset$: Observable<boolean> = this.breakpointObserver.observe(Breakpoints.Handset)
     .pipe(
@@ -54,13 +56,15 @@ export class LayoutComponent {
     public loadingService: LoadingService,
     public syncService: SyncService,
     public apiStatus: ApiStatusService,
-    private router: Router
+    private router: Router,
+    private themeService: ThemeService
   ) {
     this.apiOnline$ = this.apiStatus.isOnline$();
     this.pendingRequestCount$ = this.syncService.getPendingRequestCount();
     this.showSyncButton$ = this.pendingRequestCount$.pipe(
       map(count => count > 0)
     );
+    this.theme$ = this.themeService.theme$;
   }
 
   toggleCollapse(): void {
@@ -81,5 +85,9 @@ export class LayoutComponent {
   }
   onSyncNow(): void {
     this.syncService.processQueue();
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 }

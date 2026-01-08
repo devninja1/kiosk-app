@@ -1,47 +1,52 @@
 
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
-html {
+$primary-palette: mat.$cyan-palette;
+$tertiary-palette: mat.$orange-palette;
+
+@mixin kiosk-theme($mode) {
   @include mat.theme((
     color: (
-      primary: mat.$cyan-palette,
-      tertiary: mat.$orange-palette,
+      theme-type: $mode,
+      primary: $primary-palette,
+      tertiary: $tertiary-palette,
     ),
     typography: Roboto,
     density: 0,
   ));
+
+  color-scheme: $mode;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+html {
+  min-height: 100%;
+}
+
+html, body {
+  height: 100%;
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-  background-image: url('/images/blb-kisko-app.png');
-  background-size:unset;
-  background-position: center;
-  opacity: 0.9; // Adjust for desired transparency
-  z-index: -1; // Adjust for desired transparency
-
-  // Reset the user agent margin.
   margin: 0;
+  min-height: 100%;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  transition: background-color 150ms ease, color 150ms ease;
 }
-/* You can add global styles to this file, and also import other style files */
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+body.theme-light {
+  @include kiosk-theme(light);
+  background-image: url('/images/blb-kisko-app.png');
+}
+
+body.theme-dark {
+  @include kiosk-theme(dark);
+  background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.9)), url('/images/blb-kisko-app.png');
+}
 
 /* Snackbars */
 .mat-mdc-snack-bar-container.success-snackbar {
@@ -56,13 +61,12 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   --mat-mdc-snack-bar-button-color: var(--mat-sys-on-surface-variant);
 }
 
-// styles.scss
 .container {
   padding: 1rem;
 }
 
 @media (min-width: 768px) {
-.container {
+  .container {
     max-width: 700px;
     margin: 0 auto;
   }

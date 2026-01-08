@@ -10,6 +10,14 @@
   </button>
   <span class="spacer"></span>
 
+  <button mat-icon-button
+          class="theme-toggle"
+          (click)="toggleTheme()"
+          matTooltip="Toggle light/dark theme"
+          aria-label="Toggle theme">
+    <mat-icon>{{ (theme$ | async) === 'dark' ? 'dark_mode' : 'light_mode' }}</mat-icon>
+  </button>
+
   @if (apiOnline$ | async) {
     <span class="api-status-badge api-status-badge--online" aria-label="API status online">
       <mat-icon class="api-status-icon">cloud_done</mat-icon>
