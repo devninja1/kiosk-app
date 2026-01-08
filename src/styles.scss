@@ -45,7 +45,16 @@ body.theme-light {
 
 body.theme-dark {
   @include kiosk-theme(dark);
-  background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.9)), url('/images/blb-kisko-app.png');
+  background-color: #1a1b1d;
+  background-image: linear-gradient(135deg, rgba(58, 58, 62, 0.92), rgba(34, 34, 36, 0.9)), url('/images/blb-kisko-app.png');
+  --mat-sys-surface: #1a1b1d;
+  --mat-sys-surface-bright: #323338;
+  --mat-sys-surface-container: #25262a;
+  --mat-sys-surface-container-high: #2c2d31;
+  --mat-sys-surface-container-highest: #35363b;
+  --mat-sys-surface-container-low: #1f1f23;
+  --mat-sys-surface-container-lowest: #141417;
+  --mat-sys-background: #18181b;
 }
 
 /* Snackbars */
