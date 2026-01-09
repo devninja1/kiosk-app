@@ -2,6 +2,14 @@
   position: sticky; // or 'fixed' if you prefer
   top: 0;
   z-index: 800; // Ensure toolbar is always on top, even above loading overlay
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:host-context(.theme-dark) .header {
+  background: rgba(26, 27, 29, 0.78);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 
@@ -51,10 +59,51 @@
   margin-right: 4px;
 }
 
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.04);
+  color: inherit;
+}
+
+:host-context(.theme-dark) .user-chip {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.user-chip__name {
+  font-weight: 500;
+}
+
 .app-container {
   position: relative; // Ensures proper stacking context for the content
   height: calc(100vh - 64px); // Adjust based on your toolbar height
   isolation: isolate;// Create a new stacking context
+  background: transparent;
+}
+
+mat-sidenav-container,
+mat-sidenav-content {
+  background: transparent !important;
+}
+
+mat-sidenav {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(8px);
+}
+
+mat-sidenav .mat-drawer-inner-container {
+  border-radius: 0;
+}
+
+:host ::ng-deep mat-sidenav .mat-drawer-inner-container {
+  border-radius: 0 !important; // Forcefully remove Material's default rounding
+}
+
+:host-context(.theme-dark) mat-sidenav {
+  background: rgba(26, 27, 29, 0.82);
 }
 
 .loading-overlay {
@@ -83,7 +132,13 @@
 .footer {
   padding: 1rem;
   text-align: center;
-  background-color: var(--mat-sys-surface-container-high);
+  background: rgba(255, 255, 255, 0.74);
   color: var(--mat-sys-on-surface);
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+:host-context(.theme-dark) .footer {
+  background: rgba(26, 27, 29, 0.7);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }

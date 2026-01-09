@@ -9,6 +9,7 @@ import { LOCALE_ID } from '@angular/core';
 import { routes } from './app.routes';
 import { httpErrorInterceptor } from './core/interceptors/http-error.interceptor';
 import { loadingInterceptor } from './core/interceptors/loading.interceptor';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 // Register the locale data for 'en-IN'
 registerLocaleData(localeIn);
@@ -81,7 +82,7 @@ const dbConfig: DBConfig = {
 
 export const appConfig: ApplicationConfig = {
   providers: [provideRouter(routes), 
-    provideHttpClient(withInterceptors([httpErrorInterceptor, loadingInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, httpErrorInterceptor, loadingInterceptor])),
     provideAnimations(),
      importProvidersFrom(NgxIndexedDBModule.forRoot(dbConfig)),
     // Provide the LOCALE_ID for the entire application

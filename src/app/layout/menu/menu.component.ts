@@ -4,6 +4,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-menu',
@@ -30,12 +31,13 @@ export class MenuComponent {
     { name: 'Settings', icon: 'settings', route: '/settings' },
   ];
 
+  constructor(private authService: AuthService) {}
+
   onItemClick(): void {
     this.menuItemClicked.emit();
   }
 
   logout(): void {
-    // Implement your logout logic here
-    console.log('Logout clicked!');
+    this.authService.logout();
   }
 }

@@ -16,6 +16,7 @@ import { LoadingService } from '../../core/services/loading.service';
 import { SyncService } from '../../core/services/sync.service';
 import { ApiStatusService } from '../../core/services/api-status.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-layout',
@@ -43,6 +44,7 @@ export class LayoutComponent {
   pendingRequestCount$: Observable<number>;
   private breakpointObserver = inject(BreakpointObserver);
   theme$!: Observable<'light' | 'dark'>;
+  username$!: Observable<string>;
 
   isHandset$: Observable<boolean> = this.breakpointObserver.observe(Breakpoints.Handset)
     .pipe(
@@ -57,7 +59,8 @@ export class LayoutComponent {
     public syncService: SyncService,
     public apiStatus: ApiStatusService,
     private router: Router,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private authService: AuthService
   ) {
     this.apiOnline$ = this.apiStatus.isOnline$();
     this.pendingRequestCount$ = this.syncService.getPendingRequestCount();
@@ -65,6 +68,10 @@ export class LayoutComponent {
       map(count => count > 0)
     );
     this.theme$ = this.themeService.theme$;
+    this.username$ = this.authService.auth$().pipe(
+      map((auth) => auth?.username ?? ''),
+      shareReplay({ refCount: true, bufferSize: 1 })
+    );
   }
 
   toggleCollapse(): void {

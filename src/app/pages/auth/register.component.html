@@ -1,0 +1,98 @@
+<div class="auth-page">
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+
+  <mat-card class="auth-card">
+    <div class="card-grid">
+      <div class="card-hero">
+        <img src="/android-chrome-512x512.png" alt="Kiosk brand" class="hero-logo" />
+        <div class="hero-text">
+          <p class="eyebrow">Create account</p>
+          <h1>Join BLB Kiosk</h1>
+          <p class="subtext">Set up your access to manage products, sales, and sync across the platform.</p>
+        </div>
+        <div class="hero-badges">
+          <span class="badge">Role-based Access</span>
+          <span class="badge badge-accent">Secure by Default</span>
+        </div>
+      </div>
+
+      <div class="card-form">
+        <div class="theme-toggle" (click)="toggleTheme()" [matTooltip]="(theme$ | async) === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+          <mat-icon>{{ (theme$ | async) === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+        </div>
+        <header class="form-header">
+          <div>
+            <p class="eyebrow">Register</p>
+            <h2>Create your credentials</h2>
+          </div>
+        </header>
+
+        <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput formControlName="username" autocomplete="username" />
+            @if (form.controls.username.invalid && form.controls.username.touched) {
+              <mat-error>Username is required.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" autocomplete="new-password" />
+            <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword" [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'">
+              <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+            </button>
+            @if (form.controls.password.invalid && form.controls.password.touched) {
+              <mat-error>Password must be at least 6 characters.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Confirm password</mat-label>
+            <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="passwordConfirm" autocomplete="new-password" />
+            @if (form.controls.passwordConfirm.invalid && form.controls.passwordConfirm.touched) {
+              <mat-error>Password must be at least 6 characters.</mat-error>
+            }
+            @if (form.value.password && form.value.passwordConfirm && form.value.password !== form.value.passwordConfirm) {
+              <mat-error>Passwords do not match.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Role</mat-label>
+            <input matInput formControlName="role" />
+            @if (form.controls.role.invalid && form.controls.role.touched) {
+              <mat-error>Role is required.</mat-error>
+            }
+          </mat-form-field>
+
+          <div class="switch-row">
+            <mat-icon color="primary">verified_user</mat-icon>
+            <span>Account will be inactive by default</span>
+          </div>
+
+          @if (errorMessage) {
+            <div class="error">{{ errorMessage }}</div>
+          }
++
++          @if (successMessage) {
++            <div class="success">{{ successMessage }}</div>
++          }
+
+          <button mat-flat-button color="primary" class="submit" type="submit" [disabled]="loading">
+            @if (loading) {
+              <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
+            }
+            <span>Create account</span>
+          </button>
+
+          <div class="footnote">
+            <span>Already have an account?</span>
+            <a routerLink="/login">Sign in</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </mat-card>
+</div>

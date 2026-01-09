@@ -1,0 +1,70 @@
+<div class="login-page">
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+
+  <mat-card class="login-card">
+    <div class="card-grid">
+      <div class="card-hero">
+        <img src="/android-chrome-512x512.png" alt="Kiosk brand" class="hero-logo" />
+        <div class="hero-text">
+          <p class="eyebrow">Welcome back</p>
+          <h1>BLB Kiosk Console</h1>
+          <p class="subtext">Stay on top of sales, inventory, and sync status with a single secure login.</p>
+        </div>
+        <div class="hero-badges">
+          <span class="badge">Secure Access</span>
+          <span class="badge badge-accent">24/7 Availability</span>
+        </div>
+      </div>
+
+      <div class="card-form">
+        <div class="theme-toggle" (click)="toggleTheme()" [matTooltip]="(theme$ | async) === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+          <mat-icon>{{ (theme$ | async) === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+        </div>
+        <header class="form-header">
+          <div>
+            <p class="eyebrow">Sign in</p>
+            <h2>Continue to your workspace</h2>
+          </div>
+        </header>
+
+        <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput formControlName="username" autocomplete="username" />
+            @if (form.controls.username.invalid && form.controls.username.touched) {
+              <mat-error>Username is required.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" autocomplete="current-password" />
+            <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword" [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'">
+              <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+            </button>
+            @if (form.controls.password.invalid && form.controls.password.touched) {
+              <mat-error>Password is required.</mat-error>
+            }
+          </mat-form-field>
+
+          @if (errorMessage) {
+            <div class="error">{{ errorMessage }}</div>
+          }
+
+          <button mat-flat-button color="primary" class="submit" type="submit" [disabled]="loading">
+            @if (loading) {
+              <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
+            }
+            <span>Login</span>
+          </button>
+
+          <div class="footnote">
+            <span>New here?</span>
+            <a routerLink="/register">Create an account</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </mat-card>
+</div>

@@ -40,13 +40,19 @@ body {
 
 body.theme-light {
   @include kiosk-theme(light);
-  background-image: url('/images/blb-kisko-app.png');
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(88, 132, 255, 0.08), transparent 34%),
+    radial-gradient(circle at 80% 0%, rgba(255, 178, 120, 0.08), transparent 32%),
+    linear-gradient(135deg, #fbfdff 0%, #f5f8ff 45%, #fbfdff 100%);
 }
 
 body.theme-dark {
   @include kiosk-theme(dark);
-  background-color: #1a1b1d;
-  background-image: linear-gradient(135deg, rgba(58, 58, 62, 0.92), rgba(34, 34, 36, 0.9)), url('/images/blb-kisko-app.png');
+  background-color: #111827;
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(99, 102, 241, 0.12), transparent 36%),
+    radial-gradient(circle at 82% 12%, rgba(34, 211, 238, 0.1), transparent 34%),
+    linear-gradient(135deg, #111827 0%, #0f172a 50%, #0c1322 100%);
   --mat-sys-surface: #1a1b1d;
   --mat-sys-surface-bright: #323338;
   --mat-sys-surface-container: #25262a;

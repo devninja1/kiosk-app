@@ -10,6 +10,13 @@
   </button>
   <span class="spacer"></span>
 
+  @if (username$ | async; as username) {
+    <button mat-button class="user-chip" disableRipple>
+      <mat-icon>account_circle</mat-icon>
+      <span class="user-chip__name">{{ username }}</span>
+    </button>
+  }
+
   <button mat-icon-button
           class="theme-toggle"
           (click)="toggleTheme()"
