@@ -20,10 +20,19 @@
                 type="button"
                 aria-label="Decrease quantity"
                 (click)="decreaseQty(i)"
-                [disabled]="item.quantity <= 1">
+                  [disabled]="item.quantity <= 0.01">
                 <mat-icon>remove</mat-icon>
               </button>
-              <span class="qty-value">{{ item.quantity }}</span>
+              <input
+                class="qty-input"
+                type="number"
+                inputmode="decimal"
+                step="0.01"
+                min="0.01"
+                [value]="item.quantity"
+                (focus)="selectQty($event)"
+                (change)="setQty(i, $event.target.valueAsNumber)"
+              />
               <button
                 mat-icon-button
                 type="button"

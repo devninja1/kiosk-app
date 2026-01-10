@@ -22,6 +22,33 @@
       <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
       <mat-date-range-picker #picker></mat-date-range-picker>
     </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Order Date</mat-label>
+      <input matInput [matDatepicker]="singlePicker" [formControl]="orderDate" placeholder="Filter by date">
+      <mat-datepicker-toggle matIconSuffix [for]="singlePicker"></mat-datepicker-toggle>
+      <mat-datepicker #singlePicker></mat-datepicker>
+      @if (orderDate.value) {
+        <button mat-icon-button matSuffix (click)="orderDate.setValue(null)" matTooltip="Clear order date">
+          <mat-icon>clear</mat-icon>
+        </button>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Customer Name</mat-label>
+      <input matInput [formControl]="customerName" [matAutocomplete]="customerAuto" placeholder="e.g. papu">
+      <mat-autocomplete #customerAuto="matAutocomplete">
+        @for (name of filteredCustomerNames$ | async; track name) {
+          <mat-option [value]="name">{{ name }}</mat-option>
+        }
+      </mat-autocomplete>
+      @if (customerName.value) {
+        <button mat-icon-button matSuffix (click)="customerName.setValue('')" matTooltip="Clear customer filter">
+          <mat-icon>clear</mat-icon>
+        </button>
+      }
+    </mat-form-field>
   </div>
 
   <div class="mat-elevation-z8">
@@ -155,5 +182,11 @@
       aria-label="Select page of sales history">
     </mat-paginator>
   </div>
+
+  @if (hasFilterApplied) {
+    <div class="filter-total">
+      Filtered Total: {{ filteredTotal | currency:currencyCode:'symbol' }}
+    </div>
+  }
 </div>
 

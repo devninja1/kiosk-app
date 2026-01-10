@@ -2,8 +2,9 @@ mat-card-title {
   text-align: center;
 }
 
-.full-width {
-  width: 100%;
+.product-search-field {
+  width: 360px;
+  max-width: 100%;
 }
 
 .sale-details {
@@ -49,6 +50,11 @@ mat-card-title {
   margin-right: 8px;
 }
 
+.product-code {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
 .stock-info {
   font-size: 0.8em;
   color: rgba(0, 0, 0, 0.54);
@@ -68,9 +74,13 @@ mat-card-title {
     font-size: 18px;
     height: 18px;
     width: 18px;
-    margin-left: 8px;
+    margin-left: 6px;
     color: green;
   }
+}
+
+.added-icon--success {
+  color: #2e7d32;
 }
 
 // Responsive adjustments for smaller screens

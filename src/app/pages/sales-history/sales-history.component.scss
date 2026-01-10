@@ -116,3 +116,20 @@ tr.detail-row {
   padding-top: 0;
   padding-bottom: 0;
 }
+
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+  align-items: flex-end;
+}
+
+.filter-controls mat-form-field {
+  min-width: 220px;
+}
+
+.filter-total {
+  font-weight: 600;
+  margin-bottom: 12px;
+}

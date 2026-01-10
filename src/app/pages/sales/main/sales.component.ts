@@ -12,6 +12,8 @@ import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dial
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 
 // Child Components
 import { SalesEntryComponent } from '../entry/sales-entry.component';
@@ -45,6 +47,8 @@ import { environment } from '../../../../environments/environment';
     MatIconModule,
     MatButtonModule,
     MatCardModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
     SalesEntryComponent,
     SalesListComponent,
   ],
@@ -67,6 +71,7 @@ export class SalesComponent implements OnInit {
   customerSearch = new FormControl<string | Customer>('');
   filteredCustomers$!: Observable<Customer[]>;
   selectedCustomer: Customer | null = null;
+  orderDate = new FormControl<Date | null>(new Date());
 
   constructor(
     private productService: ProductService,
@@ -181,8 +186,12 @@ export class SalesComponent implements OnInit {
   }
 
   private _filterCustomers(name: string): Customer[] {
-    const filterValue = name.toLowerCase();
-    return this.customers.filter(customer => customer.name.toLowerCase().includes(filterValue));
+    const filterValue = name.toLowerCase().trim();
+    return this.customers.filter(customer => {
+      const nameMatch = customer.name.toLowerCase().includes(filterValue);
+      const idMatch = customer.customerId?.toString().toLowerCase().includes(filterValue) || customer.id?.toString().toLowerCase().includes(filterValue);
+      return nameMatch || idMatch;
+    });
   }
 
   displayCustomer(customer: Customer): string {
@@ -191,6 +200,11 @@ export class SalesComponent implements OnInit {
 
   onCustomerSelected(event: any) {
     this.selectedCustomer = event.option.value;
+  }
+
+  clearSelectedCustomer(): void {
+    this.selectedCustomer = null;
+    this.customerSearch.setValue('');
   }
 
   createNewCustomer(customerName: string): void {
@@ -223,24 +237,23 @@ export class SalesComponent implements OnInit {
     }
   }
 
-  onQuantityChanged(event: { index: number; delta: number }): void {
-    const { index, delta } = event;
+  onQuantityChanged(event: { index: number; delta?: number; setQuantity?: number }): void {
+    const { index, delta = 0, setQuantity } = event;
     const item = this.salesList[index];
     if (!item) return;
-    if (delta === 0) return;
 
-    const nextQuantity = item.quantity + delta;
-    if (nextQuantity < 1) return;
+    const targetQuantity = setQuantity ?? (item.quantity + delta);
+    if (!Number.isFinite(targetQuantity) || targetQuantity <= 0) return;
 
-    if (!this.isEditing) {
+    const stockDelta = setQuantity !== undefined ? (targetQuantity - item.quantity) : delta;
+    if (!this.isEditing && stockDelta !== 0) {
       // Keep product stock consistent with quantity changes.
-      // If quantity increases (+1), stock decreases (-1). If quantity decreases (-1), stock increases (+1).
-      this.productService.updateStock(item.id, -delta).subscribe();
+      this.productService.updateStock(item.id, -stockDelta).subscribe();
     }
 
     const updatedSalesList = [...this.salesList];
     const updatedItem = { ...item };
-    updatedItem.quantity = nextQuantity;
+    updatedItem.quantity = targetQuantity;
     updatedItem.subtotal = Math.max(
       0,
       (updatedItem.unit_price * updatedItem.quantity) - (updatedItem.discount || 0)
@@ -303,7 +316,7 @@ export class SalesComponent implements OnInit {
       is_review: false,
       order_items: this.salesList,
       total_amount: this.salesList.reduce((acc, item) => acc + (item.subtotal || 0), 0),
-      order_date: this.editingSale?.order_date ?? new Date(),
+      order_date: this.orderDate.value ? new Date(this.orderDate.value) : new Date(),
     };
 
     if (this.isEditing && this.editingSale) {
@@ -335,6 +348,7 @@ export class SalesComponent implements OnInit {
         this.addedProductNames.clear();
         this.selectedCustomer = null;
         this.customerSearch.setValue('');
+        this.orderDate.setValue(new Date());
       });
 
       return;
@@ -353,6 +367,7 @@ export class SalesComponent implements OnInit {
       this.addedProductNames.clear();
       this.selectedCustomer = null;
       this.customerSearch.setValue('');
+      this.orderDate.setValue(new Date());
     });
   }
 
@@ -372,6 +387,13 @@ export class SalesComponent implements OnInit {
 
     this.salesList = (sale.order_items ?? []).map(i => ({ ...i }));
     this.addedProductNames = new Set(this.salesList.map(i => i.product_name));
+
+    // Bind order date for editing
+    if (sale.order_date) {
+      this.orderDate.setValue(new Date(sale.order_date));
+    } else {
+      this.orderDate.setValue(new Date());
+    }
 
     if (sale.customer_id !== null && sale.customer_id !== undefined) {
       const matchedCustomer = this.customers.find(c => c.id === sale.customer_id) ?? null;

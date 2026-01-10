@@ -2,6 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, Subject, catchError, distinctUntilChanged, fromEvent, map, merge, of, switchMap, takeUntil, timer } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 /**
  * Global API connectivity detector.
@@ -23,7 +24,7 @@ export class ApiStatusService implements OnDestroy {
    */
   private readonly probeUrl = `${environment.apiUrl}/SalesOrder?page=1&pageSize=1`;
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private authService: AuthService) {
     // React to browser connectivity changes and re-check API.
     merge(
       of(navigator.onLine),
@@ -64,6 +65,11 @@ export class ApiStatusService implements OnDestroy {
 
   /** Force an API reachability check. */
   checkNow(): Observable<boolean> {
+    if (!this.authService.isAuthenticated()) {
+      this.online$.next(false);
+      return of(false);
+    }
+
     // If the browser is offline, don’t bother probing.
     if (!navigator.onLine) {
       this.online$.next(false);
@@ -84,6 +90,12 @@ export class ApiStatusService implements OnDestroy {
         catchError((err: HttpErrorResponse) => {
           // status 0 => network error / CORS / API unreachable.
           const reachable = err?.status !== 0;
+
+          // If API is reachable but token is invalid, log out the user.
+          if (reachable && (err.status === 401 || err.status === 403)) {
+            this.authService.logout();
+          }
+
           this.online$.next(reachable);
           return of(reachable);
         })

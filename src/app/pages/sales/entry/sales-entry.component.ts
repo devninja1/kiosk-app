@@ -85,12 +85,17 @@ export class SalesEntryComponent implements OnInit {
   private _filter(name: string): Product[] {
     const filterValue = name.toLowerCase();
     return this.getSortedProducts(
-      this.products.filter(product => product.name.toLowerCase().includes(filterValue))
+      this.products.filter(product =>
+        product.name.toLowerCase().includes(filterValue) ||
+        (product.product_code?.toLowerCase().includes(filterValue))
+      )
     );
   }
 
   displayProduct(product: Product): string {
-    return product && product.name ? product.name : '';
+    if (!product) return '';
+    const code = product.product_code ? `${product.product_code} - ` : '';
+    return `${code}${product.name}`;
   }
 
   onProductSelected(event: any) {

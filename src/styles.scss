@@ -41,26 +41,26 @@ body {
 body.theme-light {
   @include kiosk-theme(light);
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(88, 132, 255, 0.08), transparent 34%),
-    radial-gradient(circle at 80% 0%, rgba(255, 178, 120, 0.08), transparent 32%),
-    linear-gradient(135deg, #fbfdff 0%, #f5f8ff 45%, #fbfdff 100%);
+    radial-gradient(circle at 20% 20%, rgba(88, 132, 255, 0.05), transparent 34%),
+    radial-gradient(circle at 80% 0%, rgba(255, 178, 120, 0.05), transparent 32%),
+    linear-gradient(135deg, #ffffff 0%, #f8fbff 45%, #ffffff 100%);
 }
 
 body.theme-dark {
   @include kiosk-theme(dark);
-  background-color: #111827;
+  background-color: #0b0f1a;
   background-image:
-    radial-gradient(circle at 18% 22%, rgba(99, 102, 241, 0.12), transparent 36%),
-    radial-gradient(circle at 82% 12%, rgba(34, 211, 238, 0.1), transparent 34%),
-    linear-gradient(135deg, #111827 0%, #0f172a 50%, #0c1322 100%);
-  --mat-sys-surface: #1a1b1d;
-  --mat-sys-surface-bright: #323338;
-  --mat-sys-surface-container: #25262a;
-  --mat-sys-surface-container-high: #2c2d31;
-  --mat-sys-surface-container-highest: #35363b;
-  --mat-sys-surface-container-low: #1f1f23;
-  --mat-sys-surface-container-lowest: #141417;
-  --mat-sys-background: #18181b;
+    radial-gradient(circle at 18% 22%, rgba(99, 102, 241, 0.16), transparent 36%),
+    radial-gradient(circle at 82% 12%, rgba(34, 211, 238, 0.14), transparent 34%),
+    linear-gradient(135deg, #0b0f1a 0%, #0a0f1e 50%, #080c16 100%);
+  --mat-sys-surface: #12141a;
+  --mat-sys-surface-bright: #2a2c33;
+  --mat-sys-surface-container: #1b1e26;
+  --mat-sys-surface-container-high: #212531;
+  --mat-sys-surface-container-highest: #282d39;
+  --mat-sys-surface-container-low: #151822;
+  --mat-sys-surface-container-lowest: #0e1119;
+  --mat-sys-background: #0d111a;
 }
 
 /* Snackbars */

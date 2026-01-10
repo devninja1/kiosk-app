@@ -5,11 +5,20 @@
   flex-wrap: wrap;
 }
 
+.product-page-container {
+  padding: 24px;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    padding-left: 8px;
+  }
 }
 
 .header-actions {

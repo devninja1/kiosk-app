@@ -2,20 +2,21 @@
   <mat-card-title>Create Sale</mat-card-title>
   <mat-card-content>
     <!-- Product Search -->
-    <mat-form-field class="full-width">
+    <mat-form-field class="product-search-field">
       <mat-label>Search Product</mat-label>
       <input #productSearchInput type="text" matInput [formControl]="productSearch" [matAutocomplete]="auto" />
       <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayProduct"
         (optionSelected)="onProductSelected($event)" class="product-autocomplete">
         @for (product of filteredProducts | async; track product.id) {
         <mat-option [value]="product" [class.added-product]="isProductAdded(product.name)">
+          <span class="product-code">{{ product.product_code }}</span>
           <span class="product-name">{{ product.name }}</span>
           @if (product.is_Stock_enable) {
           <span class="stock-info">(Stock: {{ product.stock }})</span>
           }
           <span class="fill-remaining-space"></span>
           @if (isProductAdded(product.name)) {
-          <mat-icon class="added-icon">check_circle</mat-icon>
+          <mat-icon class="added-icon added-icon--success">check_circle</mat-icon>
           }
         </mat-option>
         }

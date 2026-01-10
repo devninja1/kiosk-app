@@ -1,4 +1,42 @@
 <div class="sales-container">
+  <div class="sales-header">
+    <h1>Sales</h1>
+  </div>
+
+  <div class="sales-toolbar">
+    <mat-form-field appearance="outline" class="customer-field">
+      <mat-label>Search for a Customer</mat-label>
+      <input
+        type="text"
+        matInput
+        [formControl]="customerSearch"
+        [matAutocomplete]="autoCustomer">
+      <button mat-icon-button matSuffix aria-label="Clear customer" *ngIf="customerSearch.value" (click)="clearSelectedCustomer()">
+        <mat-icon>close</mat-icon>
+      </button>
+      <mat-autocomplete #autoCustomer="matAutocomplete" [displayWith]="displayCustomer" (optionSelected)="onCustomerSelected($event)">
+        @for (customer of filteredCustomers$ | async; track customer.id) {
+          <mat-option [value]="customer">
+            #{{customer.customerId}} - {{customer.name}}
+          </mat-option>
+        }
+        @if (((filteredCustomers$ | async)?.length === 0) && customerSearch.value && (typeof customerSearch.value === 'string')) {
+          <mat-option (click)="createNewCustomer(customerSearch.value)">
+            <mat-icon>add</mat-icon>
+            Create new customer: "{{customerSearch.value}}"
+          </mat-option>
+        }
+      </mat-autocomplete>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="order-date-field">
+      <mat-label>Order Date</mat-label>
+      <input matInput [matDatepicker]="orderDatePicker" [formControl]="orderDate">
+      <mat-datepicker-toggle matIconSuffix [for]="orderDatePicker"></mat-datepicker-toggle>
+      <mat-datepicker #orderDatePicker></mat-datepicker>
+    </mat-form-field>
+  </div>
+
   @if (lastSavedSale) {
     <mat-card class="sale-summary-card mat-elevation-z2">
       <div class="sale-summary-header">
@@ -32,30 +70,6 @@
       </mat-card-actions>
     </mat-card>
   }
-
-  <div class="customer-selection">
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Search for a Customer</mat-label>
-      <input
-        type="text"
-        matInput
-        [formControl]="customerSearch"
-        [matAutocomplete]="autoCustomer">
-      <mat-autocomplete #autoCustomer="matAutocomplete" [displayWith]="displayCustomer" (optionSelected)="onCustomerSelected($event)">
-        @for (customer of filteredCustomers$ | async; track customer.id) {
-          <mat-option [value]="customer">
-            {{customer.name}}
-          </mat-option>
-        }
-        @if (((filteredCustomers$ | async)?.length === 0) && customerSearch.value && (typeof customerSearch.value === 'string')) {
-          <mat-option (click)="createNewCustomer(customerSearch.value)">
-            <mat-icon>add</mat-icon>
-            Create new customer: "{{customerSearch.value}}"
-          </mat-option>
-        }
-      </mat-autocomplete>
-    </mat-form-field>
-  </div>
   <app-sales-entry
     [products]="(products$ | async) ?? []"
     [addedProductNames]="addedProductNames"

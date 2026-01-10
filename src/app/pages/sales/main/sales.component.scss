@@ -7,18 +7,38 @@ app-sales-list {
   padding: 20px;
 }
 
-.customer-selection {
-  margin-bottom: 20px;
+.sales-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.sales-toolbar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  align-items: flex-end;
+}
+
+.customer-field {
+  flex: 0 0 280px;
+}
+
+.order-date-field {
+  width: 220px;
+  flex: 0 0 auto;
 }
 
 .save-sale-container {
   display: flex;
   justify-content: flex-end;
   padding-top: 16px;
-}
-
-.full-width {
-  width: 100%;
 }
 
 .sale-summary-card {

@@ -43,9 +43,15 @@ mat-card-title {
   gap: 4px;
 }
 
-.qty-value {
-  min-width: 24px;
+.qty-input {
+  width: 70px;
   text-align: center;
+  padding: 4px 6px;
+}
+
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+  margin: 0;
 }
 
 .sales-list-footer {

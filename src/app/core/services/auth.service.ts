@@ -9,8 +9,14 @@ import { AuthResponse, LoginRequest, RegisterRequest } from '../../model/auth.mo
 export class AuthService {
   private readonly storageKey = 'kiosk-auth';
   private readonly authState$ = new BehaviorSubject<AuthResponse | null>(this.loadStoredAuth());
+  private logoutTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router) {
+    const existing = this.authState$.value;
+    if (existing?.expires_at) {
+      this.scheduleAutoLogout(existing.expires_at);
+    }
+  }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${environment.apiUrl}/Auth/login`, credentials).pipe(
@@ -28,6 +34,10 @@ export class AuthService {
   }
 
   clearAuth(): void {
+    if (this.logoutTimer) {
+      clearTimeout(this.logoutTimer);
+      this.logoutTimer = null;
+    }
     this.authState$.next(null);
     localStorage.removeItem(this.storageKey);
   }
@@ -53,6 +63,7 @@ export class AuthService {
     if (auth.expires_at) {
       const expiry = new Date(auth.expires_at);
       if (Number.isNaN(expiry.getTime()) || expiry <= new Date()) {
+        this.logout();
         return false;
       }
     }
@@ -63,6 +74,7 @@ export class AuthService {
   private setAuth(auth: AuthResponse): void {
     this.authState$.next(auth);
     localStorage.setItem(this.storageKey, JSON.stringify(auth));
+    this.scheduleAutoLogout(auth.expires_at);
   }
 
   private loadStoredAuth(): AuthResponse | null {
@@ -89,5 +101,21 @@ export class AuthService {
       console.error('Failed to load stored auth', error);
       return null;
     }
+  }
+
+  private scheduleAutoLogout(expiresAt: string): void {
+    if (this.logoutTimer) {
+      clearTimeout(this.logoutTimer);
+    }
+
+    const expiry = new Date(expiresAt);
+    const timeout = expiry.getTime() - Date.now();
+
+    if (Number.isNaN(expiry.getTime()) || timeout <= 0) {
+      this.logout();
+      return;
+    }
+
+    this.logoutTimer = setTimeout(() => this.logout(), timeout);
   }
 }

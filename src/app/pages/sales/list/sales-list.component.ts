@@ -17,7 +17,7 @@ import { environment } from '../../../../environments/environment';
 export class SalesListComponent {
   @Input() salesList: SalesItem[] = [];
   @Output() itemDeleted = new EventEmitter<number>();
-  @Output() quantityChanged = new EventEmitter<{ index: number; delta: number }>();
+  @Output() quantityChanged = new EventEmitter<{ index: number; delta?: number; setQuantity?: number }>();
   readonly currencyCode = environment.currencyCode;
 
   get grandTotal(): number {
@@ -42,7 +42,19 @@ export class SalesListComponent {
 
   decreaseQty(index: number): void {
     const item = this.salesList[index];
-    if (!item || item.quantity <= 1) return;
+    if (!item || item.quantity <= 0.01) return;
     this.quantityChanged.emit({ index, delta: -1 });
+  }
+
+  setQty(index: number, value: number): void {
+    if (!Number.isFinite(value) || value <= 0) return;
+    this.quantityChanged.emit({ index, setQuantity: value });
+  }
+
+  selectQty(event: FocusEvent): void {
+    const input = event.target as HTMLInputElement | null;
+    if (input) {
+      setTimeout(() => input.select(), 0);
+    }
   }
 }

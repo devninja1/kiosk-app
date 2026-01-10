@@ -65,18 +65,32 @@ export class SalesService {
   fetchSalesPage(
     pageIndex: number,
     pageSize: number,
-    dateRange?: { start: Date | null; end: Date | null }
+    dateRange?: { start: Date | null; end: Date | null },
+    filters?: { orderDate?: Date | null; customerName?: string | null }
   ): Observable<PaginatedResponse<Sale>> {
     if (this.apiStatus.isOnlineNow()) {
-      return this.fetchSalesPageOnline(pageIndex, pageSize);
+      return this.fetchSalesPageOnline(pageIndex, pageSize, filters);
     }
 
-    return this.fetchSalesPageOffline(pageIndex, pageSize, dateRange);
+    return this.fetchSalesPageOffline(pageIndex, pageSize, dateRange, filters);
   }
 
-  private fetchSalesPageOnline(pageIndex: number, pageSize: number): Observable<PaginatedResponse<Sale>> {
+  private fetchSalesPageOnline(
+    pageIndex: number,
+    pageSize: number,
+    filters?: { orderDate?: Date | null; customerName?: string | null }
+  ): Observable<PaginatedResponse<Sale>> {
     const page = pageIndex + 1;
-    const url = `${this.apiUrl}?page=${page}&pageSize=${pageSize}`;
+
+    const params: string[] = [`page=${page}`, `pageSize=${pageSize}`];
+    if (filters?.orderDate) {
+      params.push(`orderDate=${encodeURIComponent(this.formatOrderDate(filters.orderDate))}`);
+    }
+    if (filters?.customerName) {
+      params.push(`customerName=${encodeURIComponent(filters.customerName.trim())}`);
+    }
+
+    const url = `${this.apiUrl}?${params.join('&')}`;
 
     return this.http.get<PaginatedResponse<Sale>>(url).pipe(
       map((res) => {
@@ -93,7 +107,8 @@ export class SalesService {
   private fetchSalesPageOffline(
     pageIndex: number,
     pageSize: number,
-    dateRange?: { start: Date | null; end: Date | null }
+    dateRange?: { start: Date | null; end: Date | null },
+    filters?: { orderDate?: Date | null; customerName?: string | null }
   ): Observable<PaginatedResponse<Sale>> {
     return this.dbService.getAll<Sale>('sales').pipe(
       map((sales) => {
@@ -112,6 +127,23 @@ export class SalesService {
             const d = new Date(s.order_date);
             return d >= startDate && d <= endDate;
           });
+        }
+
+        // Optional single order date filter
+        if (filters?.orderDate) {
+          const target = new Date(filters.orderDate);
+          target.setHours(0, 0, 0, 0);
+          filtered = filtered.filter(s => {
+            const d = new Date(s.order_date);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() === target.getTime();
+          });
+        }
+
+        // Optional customer name filter
+        if (filters?.customerName) {
+          const search = filters.customerName.trim().toLowerCase();
+          filtered = filtered.filter(s => (s.customer_name ?? '').toLowerCase().includes(search));
         }
 
         // Sort by most recent first
@@ -179,6 +211,14 @@ export class SalesService {
       total_amount: this.toNumber((api as any)?.total_amount, 0),
       order_date: new Date(api.order_date)
     };
+  }
+
+  private formatOrderDate(date: Date): string {
+    const d = new Date(date);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${mm}/${dd}/${yy}`;
   }
 
   private toNumber(value: any, fallback = 0): number {
